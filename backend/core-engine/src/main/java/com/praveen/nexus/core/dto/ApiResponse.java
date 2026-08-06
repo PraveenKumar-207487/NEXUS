@@ -15,4 +15,11 @@ public class ApiResponse<T> {
     private T data;
 
     private LocalDateTime timestamp;
+    // Custom constructor (automatically sets timestamp)
+    public ApiResponse(boolean success, String message, T data) {
+        this.success = success;
+        this.message = message;
+        this.data = data;
+        this.timestamp = LocalDateTime.now();
+    }
 }
