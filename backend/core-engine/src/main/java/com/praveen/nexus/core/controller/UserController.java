@@ -14,8 +14,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.praveen.nexus.core.dto.ApiResponse;
-import com.praveen.nexus.core.model.User;
+import com.praveen.nexus.core.dto.UserRequest;
+import com.praveen.nexus.core.dto.UserResponse;
 import com.praveen.nexus.core.service.UserService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/users")
@@ -26,9 +29,9 @@ public class UserController {
 
     // Create User
     @PostMapping
-    public ApiResponse<User> saveUser(@RequestBody User user) {
+    public ApiResponse<UserResponse> saveUser(@Valid @RequestBody UserRequest request) {
 
-        User savedUser = userService.saveUser(user);
+        UserResponse savedUser = userService.saveUser(request);
 
         return new ApiResponse<>(
                 true,
@@ -39,9 +42,9 @@ public class UserController {
 
     // Get All Users
     @GetMapping
-    public ApiResponse<List<User>> getAllUsers() {
+    public ApiResponse<List<UserResponse>> getAllUsers() {
 
-        List<User> users = userService.getAllUsers();
+        List<UserResponse> users = userService.getAllUsers();
 
         return new ApiResponse<>(
                 true,
@@ -54,9 +57,10 @@ public class UserController {
     @GetMapping("/{id}")
     public ApiResponse<?> getUserById(@PathVariable String id) {
 
-        Optional<User> user = userService.getUserById(id);
+        Optional<UserResponse> user = userService.getUserById(id);
 
         if (user.isPresent()) {
+
             return new ApiResponse<>(
                     true,
                     "User Found",
@@ -75,9 +79,9 @@ public class UserController {
     @PutMapping("/{id}")
     public ApiResponse<?> updateUser(
             @PathVariable String id,
-            @RequestBody User user) {
+            @Valid @RequestBody UserRequest request) {
 
-        User updatedUser = userService.updateUser(id, user);
+        UserResponse updatedUser = userService.updateUser(id, request);
 
         if (updatedUser != null) {
 
@@ -116,9 +120,9 @@ public class UserController {
                 null
         );
     }
-    @GetMapping("/dbinfo")
-public String databaseInfo() {
-    return userService.getDatabaseInfo();
-}
 
+    @GetMapping("/dbinfo")
+    public String databaseInfo() {
+        return userService.getDatabaseInfo();
+    }
 }
