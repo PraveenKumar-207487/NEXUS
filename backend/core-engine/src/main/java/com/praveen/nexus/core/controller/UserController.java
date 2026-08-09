@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.praveen.nexus.core.dto.ApiResponse;
+import com.praveen.nexus.core.dto.LoginRequest;
+import com.praveen.nexus.core.dto.LoginResponse;
 import com.praveen.nexus.core.dto.UserRequest;
 import com.praveen.nexus.core.dto.UserResponse;
 import com.praveen.nexus.core.service.UserService;
@@ -125,4 +128,18 @@ public class UserController {
     public String databaseInfo() {
         return userService.getDatabaseInfo();
     }
+    @PostMapping("/login")
+public ResponseEntity<ApiResponse<LoginResponse>> login(
+        @Valid @RequestBody LoginRequest request) {
+
+    LoginResponse response = userService.login(request);
+
+    return ResponseEntity.ok(
+            new ApiResponse<>(
+                    true,
+                    "Login successful",
+                    response
+            )
+    );
+}
 }

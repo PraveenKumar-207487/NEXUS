@@ -3,6 +3,8 @@ package com.praveen.nexus.core.service;
 import java.util.List;
 import java.util.Optional;
 
+import com.praveen.nexus.core.dto.LoginRequest;
+import com.praveen.nexus.core.dto.LoginResponse;
 import com.praveen.nexus.core.dto.UserRequest;
 import com.praveen.nexus.core.dto.UserResponse;
 
@@ -19,4 +21,5 @@ public interface UserService {
     boolean deleteUser(String id);
 
     String getDatabaseInfo();
+    LoginResponse login(LoginRequest request);
 }

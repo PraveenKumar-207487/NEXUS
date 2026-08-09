@@ -1,6 +1,7 @@
 package com.praveen.nexus.core.exception;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -40,4 +41,16 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // Invalid Login Credentials
+    @ExceptionHandler(BadCredentialsException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ApiResponse<?> handleBadCredentials(
+            BadCredentialsException ex) {
+
+        return new ApiResponse<>(
+                false,
+                "Invalid email or password",
+                null
+        );
+    }
 }
