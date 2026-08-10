@@ -1,15 +1,23 @@
 package com.praveen.nexus.core.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 public class SecurityConfig {
+
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -17,21 +25,71 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http) throws Exception {
 
         http
-            // Disable CSRF because we are building a REST API
             .csrf(csrf -> csrf.disable())
 
-            .authorizeHttpRequests(auth -> auth
-                // User registration
-                .requestMatchers(HttpMethod.POST, "/users").permitAll()
+            .exceptionHandling(exception -> exception
+                .authenticationEntryPoint((request, response, authException) -> {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
 
-                // User login
-                .requestMatchers(HttpMethod.POST, "/users/login").permitAll()
+                    response.getWriter().write(
+                        "{\"success\":false,\"message\":\"Authentication required\",\"data\":null}"
+                    );
+                })
+            )
+
+            // JWT authentication is stateless
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(
+                    SessionCreationPolicy.STATELESS
+                )
+            )
+
+            .authorizeHttpRequests(auth -> auth
+
+                // Registration
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/users"
+                ).permitAll()
+
+                // Login
+                .requestMatchers(
+                    HttpMethod.POST,
+                    "/users/login"
+                ).permitAll()
+
+                // USER + ADMIN can read users
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/users",
+                    "/users/**"
+                ).hasAnyRole("USER", "ADMIN")
+
+                // Only ADMIN can update
+                .requestMatchers(
+                    HttpMethod.PUT,
+                    "/users/**"
+                ).hasRole("ADMIN")
+
+                // Only ADMIN can delete
+                .requestMatchers(
+                    HttpMethod.DELETE,
+                    "/users/**"
+                ).hasRole("ADMIN")
 
                 // Everything else requires authentication
                 .anyRequest().authenticated()
+            )
+
+            // JWT filter runs before Spring's authentication filter
+            .addFilterBefore(
+                jwtAuthenticationFilter,
+                UsernamePasswordAuthenticationFilter.class
             );
 
         return http.build();

@@ -30,6 +30,8 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+private JwtService jwtService;
 
     @Override
     public String getDatabaseInfo() {
@@ -55,8 +57,7 @@ public class UserServiceImpl implements UserService {
 
         // Hash password before storing in MongoDB
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-
-        user.setRole(request.getRole());
+        user.setRole("USER");
         user.setCreatedAt(LocalDateTime.now());
 
         User savedUser = userRepository.save(user);
@@ -93,7 +94,9 @@ public class UserServiceImpl implements UserService {
             user.setEmail(request.getEmail());
 
             // Hash new password before storing in MongoDB
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
+           user.setPassword(
+        passwordEncoder.encode(request.getPassword())
+            );
 
             user.setRole(request.getRole());
 
@@ -126,7 +129,8 @@ public class UserServiceImpl implements UserService {
                 user.getRole(),
                 user.getCreatedAt());
     }
-   @Override
+
+@Override
 public LoginResponse login(LoginRequest request) {
 
     User user = userRepository.findByEmail(request.getEmail())
@@ -142,11 +146,16 @@ public LoginResponse login(LoginRequest request) {
         throw new BadCredentialsException("Invalid email or password");
     }
 
-    return new LoginResponse(
-            "Login successful",
+    String token = jwtService.generateToken(
             user.getEmail(),
             user.getRole()
     );
-}
-}
 
+    return new LoginResponse(
+            "Login successful",
+            user.getEmail(),
+            user.getRole(),
+            token
+    );
+}
+}
