@@ -1,11 +1,13 @@
 package com.praveen.nexus.core.exception;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.praveen.nexus.core.dto.ApiResponse;
 
@@ -52,5 +54,18 @@ public class GlobalExceptionHandler {
                 "Invalid email or password",
                 null
         );
+    }
+
+    // Authorization / resource exceptions
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<?>> handleResponseStatusException(
+            ResponseStatusException ex) {
+
+        return ResponseEntity.status(ex.getStatusCode())
+                .body(new ApiResponse<>(
+                        false,
+                        ex.getReason(),
+                        null
+                ));
     }
 }

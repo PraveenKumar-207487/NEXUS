@@ -10,9 +10,7 @@ public interface ConversationService {
 
     List<Conversation> getUserConversations(String userId);
 
-    Conversation getConversationById(String id, String userId);
+    Conversation getConversationById(String conversationId, String userId);
 
-    Conversation updateConversation(String id, String userId, String title);
-
-    void deleteConversation(String id, String userId);
+    void deleteConversation(String conversationId, String userId);
 }

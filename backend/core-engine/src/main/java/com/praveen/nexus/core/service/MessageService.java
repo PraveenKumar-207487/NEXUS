@@ -10,10 +10,14 @@ public interface MessageService {
             String conversationId,
             String userId,
             String role,
-            String content
-    );
+            String content);
 
-    List<Message> getConversationMessages(String conversationId);
+    List<Message> getConversationMessages(
+            String conversationId,
+            String userId);
 
-    void deleteMessage(String id);
+    void deleteMessage(
+            String conversationId,
+            String messageId,
+            String userId);
 }

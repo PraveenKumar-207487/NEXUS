@@ -24,57 +24,92 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private JwtService jwtService;
 
-    @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
+   @Override
+protected void doFilterInternal(
+        HttpServletRequest request,
+        HttpServletResponse response,
+        FilterChain filterChain)
+        throws ServletException, IOException {
 
-        String authHeader = request.getHeader("Authorization");
+    String authHeader = request.getHeader("Authorization");
 
-        // No JWT provided
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+    System.out.println("=================================");
+    System.out.println("REQUEST: "
+            + request.getMethod()
+            + " "
+            + request.getRequestURI());
 
-            filterChain.doFilter(request, response);
-            return;
-        }
+    System.out.println("AUTH HEADER: " + authHeader);
 
-        String token = authHeader.substring(7);
+    // No Authorization header
+    if (authHeader == null || authHeader.isBlank()) {
 
-        try {
-
-            if (jwtService.isTokenValid(token)) {
-
-                String email = jwtService.extractEmail(token);
-
-                String role = jwtService.extractRole(token);
-
-                SimpleGrantedAuthority authority =
-                        new SimpleGrantedAuthority("ROLE_" + role);
-
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                email,
-                                null,
-                                List.of(authority)
-                        );
-
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request)
-                );
-
-                SecurityContextHolder
-                        .getContext()
-                        .setAuthentication(authentication);
-            }
-
-        } catch (Exception e) {
-
-            SecurityContextHolder.clearContext();
-        }
+        System.out.println("NO JWT FOUND");
 
         filterChain.doFilter(request, response);
+        return;
     }
+
+    // Authorization header must start with Bearer
+    if (!authHeader.startsWith("Bearer ")) {
+
+        System.out.println("INVALID AUTHORIZATION HEADER");
+
+        filterChain.doFilter(request, response);
+        return;
+    }
+
+    String token = authHeader.substring(7).trim();
+
+    System.out.println("TOKEN FOUND");
+
+    try {
+
+        // Validate JWT
+        if (jwtService.isTokenValid(token)) {
+
+            System.out.println("JWT VALID");
+
+            String email = jwtService.extractEmail(token);
+            String role = jwtService.extractRole(token);
+
+            System.out.println("Authenticated User: " + email);
+            System.out.println("Role: " + role);
+
+            SimpleGrantedAuthority authority =
+                    new SimpleGrantedAuthority("ROLE_" + role);
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            email,
+                            null,
+                            List.of(authority)
+                    );
+
+            authentication.setDetails(
+                    new WebAuthenticationDetailsSource()
+                            .buildDetails(request)
+            );
+
+            SecurityContextHolder
+                    .getContext()
+                    .setAuthentication(authentication);
+
+            System.out.println("SECURITY CONTEXT SET");
+
+        } else {
+
+            System.out.println("JWT INVALID");
+        }
+
+    } catch (Exception e) {
+
+        System.out.println("JWT AUTHENTICATION FAILED");
+        System.out.println("Reason: " + e.getMessage());
+
+        SecurityContextHolder.clearContext();
+    }
+
+    filterChain.doFilter(request, response);
+}
 }

@@ -1,8 +1,11 @@
 package com.praveen.nexus.core.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.praveen.nexus.core.model.Conversation;
 import com.praveen.nexus.core.repository.ConversationRepository;
@@ -18,10 +21,12 @@ public class ConversationServiceImpl implements ConversationService {
     @Override
     public Conversation createConversation(String userId, String title) {
 
-        Conversation conversation = Conversation.builder()
-                .userId(userId)
-                .title(title)
-                .build();
+        Conversation conversation = new Conversation();
+
+        conversation.setUserId(userId);
+        conversation.setTitle(title);
+        conversation.setCreatedAt(LocalDateTime.now());
+        conversation.setUpdatedAt(LocalDateTime.now());
 
         return conversationRepository.save(conversation);
     }
@@ -34,42 +39,48 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Override
     public Conversation getConversationById(
-            String id,
+            String conversationId,
             String userId) {
 
-        return conversationRepository
-                .findByIdAndUserId(id, userId)
+        // First find the conversation
+        Conversation conversation = conversationRepository
+                .findById(conversationId)
                 .orElseThrow(() ->
-                        new RuntimeException("Conversation not found"));
-    }
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Conversation not found"));
 
-    @Override
-    public Conversation updateConversation(
-            String id,
-            String userId,
-            String title) {
+        // Check ownership
+        if (!conversation.getUserId().equals(userId)) {
 
-        Conversation conversation =
-                conversationRepository
-                        .findByIdAndUserId(id, userId)
-                        .orElseThrow(() ->
-                                new RuntimeException("Conversation not found"));
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to access this conversation");
+        }
 
-        conversation.setTitle(title);
-
-        return conversationRepository.save(conversation);
+        return conversation;
     }
 
     @Override
     public void deleteConversation(
-            String id,
+            String conversationId,
             String userId) {
 
-        Conversation conversation =
-                conversationRepository
-                        .findByIdAndUserId(id, userId)
-                        .orElseThrow(() ->
-                                new RuntimeException("Conversation not found"));
+        // First find the conversation
+        Conversation conversation = conversationRepository
+                .findById(conversationId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Conversation not found"));
+
+        // Check ownership
+        if (!conversation.getUserId().equals(userId)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to delete this conversation");
+        }
 
         conversationRepository.delete(conversation);
     }
