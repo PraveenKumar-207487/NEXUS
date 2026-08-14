@@ -1,6 +1,13 @@
 package com.praveen.nexus.core.service;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.praveen.nexus.core.dto.ChatRequest;
 import com.praveen.nexus.core.dto.ChatResponse;
@@ -15,49 +22,85 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
 
-    private final AiClient aiClient;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
+    private final AiClient aiClient;
 
     @Override
-    public ChatResponse chat(String userId, ChatRequest request) {
+    public ChatResponse chat(
+            String userId,
+            ChatRequest request) {
 
-        // 1. Create a new conversation
-        Conversation conversation = Conversation.builder()
-                .userId(userId)
-                .title(request.getMessage())
-                .build();
+        String conversationId = request.getConversationId();
 
-        conversation = conversationRepository.save(conversation);
+        // 1. Find conversation
+        Conversation conversation =
+                conversationRepository
+                        .findById(conversationId)
+                        .orElseThrow(() ->
+                                new ResponseStatusException(
+                                        HttpStatus.NOT_FOUND,
+                                        "Conversation not found"));
 
-        // 2. Save user's message
-        Message userMessage = Message.builder()
-                .conversationId(conversation.getId())
-                .userId(userId)
-                .role("USER")
-                .content(request.getMessage())
-                .build();
+        // 2. Verify conversation ownership
+        if (!conversation.getUserId().equals(userId)) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You are not allowed to access this conversation");
+        }
+
+        // 3. Load existing conversation history for context and preserve it in a
+        // separate list before saving the current user message. This avoids
+        // accidental duplication or mutation while the current message is saved.
+        List<Message> conversationHistory =
+                messageRepository
+                        .findByConversationIdOrderByCreatedAtAsc(conversationId);
+        List<Message> preservedHistory =
+                conversationHistory == null
+                        ? new ArrayList<>()
+                        : new ArrayList<>(conversationHistory);
+
+        // 4. Save USER message
+        Message userMessage = new Message();
+
+        userMessage.setConversationId(conversationId);
+        userMessage.setUserId(userId);
+        userMessage.setRole("USER");
+        userMessage.setContent(request.getMessage());
+        userMessage.setCreatedAt(LocalDateTime.now());
 
         messageRepository.save(userMessage);
 
-        // 3. Send message to AI service
-        String aiResponse = aiClient.getAiResponse(
-                request.getMessage()
-        );
+        // 5. Send message to AI service using the preserved history snapshot.
+        String aiResponse;
+        try {
+            aiResponse = aiClient.getAiResponse(
+                    request.getMessage(),
+                    preservedHistory);
+        } catch (RestClientException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "AI service is currently unavailable. Please try again later.");
+        }
 
-        // 4. Save AI response
-        Message aiMessage = Message.builder()
-                .conversationId(conversation.getId())
-                .userId(userId)
-                .role("AI")
-                .content(aiResponse)
-                .build();
+        // 6. Save ASSISTANT message
+        Message assistantMessage = new Message();
 
-        messageRepository.save(aiMessage);
+        assistantMessage.setConversationId(conversationId);
 
-        // 5. Return response
+        // AI message does not belong to the user
+        assistantMessage.setUserId(null);
+
+        assistantMessage.setRole("ASSISTANT");
+        assistantMessage.setContent(aiResponse);
+        assistantMessage.setCreatedAt(LocalDateTime.now());
+
+        messageRepository.save(assistantMessage);
+
+        // 7. Return response
         return new ChatResponse(
-                conversation.getId(),
+                conversationId,
                 request.getMessage(),
                 aiResponse
         );

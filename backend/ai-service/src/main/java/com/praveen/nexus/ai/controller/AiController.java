@@ -24,7 +24,7 @@ public class AiController {
             @RequestBody ChatRequest request) {
 
         String response =
-                aiService.generateResponse(request.getMessage());
+                aiService.generateResponse(request);
 
         return ResponseEntity.ok(
                 new ChatResponse(response)

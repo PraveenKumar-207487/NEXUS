@@ -10,6 +10,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ChatRequest {
 
+    @NotBlank(message = "Conversation ID cannot be empty")
+    private String conversationId;
+
     @NotBlank(message = "Message cannot be empty")
     private String message;
 }
