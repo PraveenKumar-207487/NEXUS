@@ -1,7 +1,6 @@
 package com.praveen.nexus.core.service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -50,18 +49,7 @@ public class ChatServiceImpl implements ChatService {
                     "You are not allowed to access this conversation");
         }
 
-        // 3. Load existing conversation history for context and preserve it in a
-        // separate list before saving the current user message. This avoids
-        // accidental duplication or mutation while the current message is saved.
-        List<Message> conversationHistory =
-                messageRepository
-                        .findByConversationIdOrderByCreatedAtAsc(conversationId);
-        List<Message> preservedHistory =
-                conversationHistory == null
-                        ? new ArrayList<>()
-                        : new ArrayList<>(conversationHistory);
-
-        // 4. Save USER message
+        // 3. Save USER message
         Message userMessage = new Message();
 
         userMessage.setConversationId(conversationId);
@@ -72,13 +60,22 @@ public class ChatServiceImpl implements ChatService {
 
         messageRepository.save(userMessage);
 
-        // 5. Send message to AI service using the preserved history snapshot.
+        // 4. Load complete conversation history
+        // This now includes the current USER message.
+        List<Message> conversationHistory =
+                messageRepository
+                        .findByConversationIdOrderByCreatedAtAsc(conversationId);
+
+        // 5. Send message and conversation history to AI service
         String aiResponse;
+
         try {
             aiResponse = aiClient.getAiResponse(
                     request.getMessage(),
-                    preservedHistory);
+                    conversationHistory);
+
         } catch (RestClientException e) {
+
             throw new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE,
                     "AI service is currently unavailable. Please try again later.");

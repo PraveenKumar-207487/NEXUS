@@ -7,8 +7,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.praveen.nexus.core.dto.ApiResponse;
 import com.praveen.nexus.core.dto.ChatRequest;
 import com.praveen.nexus.core.dto.ChatResponse;
+import com.praveen.nexus.core.exception.ResourceNotFoundException;
 import com.praveen.nexus.core.model.User;
 import com.praveen.nexus.core.repository.UserRepository;
 import com.praveen.nexus.core.service.ChatService;
@@ -25,7 +27,7 @@ public class ChatController {
     private final UserRepository userRepository;
 
     @PostMapping
-    public ResponseEntity<ChatResponse> chat(
+    public ResponseEntity<ApiResponse<ChatResponse>> chat(
             @Valid @RequestBody ChatRequest request,
             Authentication authentication) {
 
@@ -33,13 +35,19 @@ public class ChatController {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
         ChatResponse response =
                 chatService.chat(
                         user.getId(),
                         request);
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Chat response generated successfully",
+                        response
+                )
+        );
     }
 }

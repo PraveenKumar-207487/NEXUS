@@ -33,18 +33,8 @@ protected void doFilterInternal(
 
     String authHeader = request.getHeader("Authorization");
 
-    System.out.println("=================================");
-    System.out.println("REQUEST: "
-            + request.getMethod()
-            + " "
-            + request.getRequestURI());
-
-    System.out.println("AUTH HEADER: " + authHeader);
-
     // No Authorization header
     if (authHeader == null || authHeader.isBlank()) {
-
-        System.out.println("NO JWT FOUND");
 
         filterChain.doFilter(request, response);
         return;
@@ -53,28 +43,19 @@ protected void doFilterInternal(
     // Authorization header must start with Bearer
     if (!authHeader.startsWith("Bearer ")) {
 
-        System.out.println("INVALID AUTHORIZATION HEADER");
-
         filterChain.doFilter(request, response);
         return;
     }
 
     String token = authHeader.substring(7).trim();
 
-    System.out.println("TOKEN FOUND");
-
     try {
 
         // Validate JWT
         if (jwtService.isTokenValid(token)) {
 
-            System.out.println("JWT VALID");
-
             String email = jwtService.extractEmail(token);
             String role = jwtService.extractRole(token);
-
-            System.out.println("Authenticated User: " + email);
-            System.out.println("Role: " + role);
 
             SimpleGrantedAuthority authority =
                     new SimpleGrantedAuthority("ROLE_" + role);
@@ -95,17 +76,9 @@ protected void doFilterInternal(
                     .getContext()
                     .setAuthentication(authentication);
 
-            System.out.println("SECURITY CONTEXT SET");
-
-        } else {
-
-            System.out.println("JWT INVALID");
         }
 
     } catch (Exception e) {
-
-        System.out.println("JWT AUTHENTICATION FAILED");
-        System.out.println("Reason: " + e.getMessage());
 
         SecurityContextHolder.clearContext();
     }

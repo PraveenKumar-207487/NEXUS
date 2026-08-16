@@ -14,11 +14,19 @@ public interface UserService {
 
     List<UserResponse> getAllUsers();
 
+    List<UserResponse> getAllUsers(String authenticatedEmail);
+
     Optional<UserResponse> getUserById(String id);
+
+    Optional<UserResponse> getUserById(String id, String authenticatedEmail);
 
     UserResponse updateUser(String id, UserRequest request);
 
+    UserResponse updateUser(String id, String authenticatedEmail, UserRequest request);
+
     boolean deleteUser(String id);
+
+    boolean deleteUser(String id, String authenticatedEmail);
 
     String getDatabaseInfo();
     LoginResponse login(LoginRequest request);

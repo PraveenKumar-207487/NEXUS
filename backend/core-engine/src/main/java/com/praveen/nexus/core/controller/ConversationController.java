@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.praveen.nexus.core.dto.ApiResponse;
 import com.praveen.nexus.core.dto.ConversationRequest;
+import com.praveen.nexus.core.exception.ResourceNotFoundException;
 import com.praveen.nexus.core.model.Conversation;
 import com.praveen.nexus.core.model.User;
 import com.praveen.nexus.core.repository.UserRepository;
@@ -34,7 +36,7 @@ public class ConversationController {
 
     // CREATE CONVERSATION
     @PostMapping
-    public ResponseEntity<Conversation> createConversation(
+    public ResponseEntity<ApiResponse<Conversation>> createConversation(
             @Valid @RequestBody ConversationRequest request,
             Authentication authentication) {
 
@@ -42,7 +44,7 @@ public class ConversationController {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
         Conversation conversation =
                 conversationService.createConversation(
@@ -51,30 +53,42 @@ public class ConversationController {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(conversation);
+                .body(
+                        new ApiResponse<>(
+                                true,
+                                "Conversation Created Successfully",
+                                conversation
+                        )
+                );
     }
 
     // GET USER'S CONVERSATIONS
     @GetMapping
-    public ResponseEntity<List<Conversation>> getUserConversations(
+    public ResponseEntity<ApiResponse<List<Conversation>>> getUserConversations(
             Authentication authentication) {
 
         String email = authentication.getName();
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
         List<Conversation> conversations =
                 conversationService.getUserConversations(
                         user.getId());
 
-        return ResponseEntity.ok(conversations);
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Conversations Retrieved Successfully",
+                        conversations
+                )
+        );
     }
 
     // GET CONVERSATION BY ID
     @GetMapping("/{id}")
-    public ResponseEntity<Conversation> getConversationById(
+    public ResponseEntity<ApiResponse<Conversation>> getConversationById(
             @PathVariable String id,
             Authentication authentication) {
 
@@ -82,14 +96,20 @@ public class ConversationController {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
         Conversation conversation =
                 conversationService.getConversationById(
                         id,
                         user.getId());
 
-        return ResponseEntity.ok(conversation);
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Conversation Retrieved Successfully",
+                        conversation
+                )
+        );
     }
 
     // DELETE CONVERSATION
@@ -102,7 +122,7 @@ public class ConversationController {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
         conversationService.deleteConversation(
                 id,

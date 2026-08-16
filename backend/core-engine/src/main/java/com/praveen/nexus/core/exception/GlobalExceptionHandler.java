@@ -68,4 +68,28 @@ public class GlobalExceptionHandler {
                         null
                 ));
     }
+    // Resource Not Found
+@ExceptionHandler(ResourceNotFoundException.class)
+@ResponseStatus(HttpStatus.NOT_FOUND)
+public ApiResponse<?> handleResourceNotFound(
+        ResourceNotFoundException ex) {
+
+    return new ApiResponse<>(
+            false,
+            ex.getMessage(),
+            null
+    );
+}
+
+// Unexpected Errors
+@ExceptionHandler(Exception.class)
+@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+public ApiResponse<?> handleGeneralException(Exception ex) {
+
+    return new ApiResponse<>(
+            false,
+            "Internal server error",
+            null
+    );
+}
 }

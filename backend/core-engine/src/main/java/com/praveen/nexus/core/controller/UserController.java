@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,9 +46,9 @@ public class UserController {
 
     // Get All Users
     @GetMapping
-    public ApiResponse<List<UserResponse>> getAllUsers() {
+    public ApiResponse<List<UserResponse>> getAllUsers(Authentication authentication) {
 
-        List<UserResponse> users = userService.getAllUsers();
+        List<UserResponse> users = userService.getAllUsers(authentication.getName());
 
         return new ApiResponse<>(
                 true,
@@ -58,9 +59,11 @@ public class UserController {
 
     // Get User By Id
     @GetMapping("/{id}")
-    public ApiResponse<?> getUserById(@PathVariable String id) {
+    public ApiResponse<?> getUserById(
+            @PathVariable String id,
+            Authentication authentication) {
 
-        Optional<UserResponse> user = userService.getUserById(id);
+        Optional<UserResponse> user = userService.getUserById(id, authentication.getName());
 
         if (user.isPresent()) {
 
@@ -82,9 +85,10 @@ public class UserController {
     @PutMapping("/{id}")
     public ApiResponse<?> updateUser(
             @PathVariable String id,
-            @Valid @RequestBody UserRequest request) {
+            @Valid @RequestBody UserRequest request,
+            Authentication authentication) {
 
-        UserResponse updatedUser = userService.updateUser(id, request);
+        UserResponse updatedUser = userService.updateUser(id, authentication.getName(), request);
 
         if (updatedUser != null) {
 
@@ -104,9 +108,11 @@ public class UserController {
 
     // Delete User
     @DeleteMapping("/{id}")
-    public ApiResponse<?> deleteUser(@PathVariable String id) {
+    public ApiResponse<?> deleteUser(
+            @PathVariable String id,
+            Authentication authentication) {
 
-        boolean deleted = userService.deleteUser(id);
+        boolean deleted = userService.deleteUser(id, authentication.getName());
 
         if (deleted) {
 
@@ -125,21 +131,29 @@ public class UserController {
     }
 
     @GetMapping("/dbinfo")
-    public String databaseInfo() {
-        return userService.getDatabaseInfo();
-    }
-    @PostMapping("/login")
-public ResponseEntity<ApiResponse<LoginResponse>> login(
-        @Valid @RequestBody LoginRequest request) {
+public ApiResponse<String> databaseInfo() {
 
-    LoginResponse response = userService.login(request);
+    String databaseInfo = userService.getDatabaseInfo();
 
-    return ResponseEntity.ok(
-            new ApiResponse<>(
-                    true,
-                    "Login successful",
-                    response
-            )
+    return new ApiResponse<>(
+            true,
+            "Database information retrieved successfully",
+            databaseInfo
     );
 }
+
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(
+            @Valid @RequestBody LoginRequest request) {
+
+        LoginResponse response = userService.login(request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Login successful",
+                        response
+                )
+        );
+    }
 }

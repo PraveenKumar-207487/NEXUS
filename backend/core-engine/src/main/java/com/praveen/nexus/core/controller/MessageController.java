@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.praveen.nexus.core.dto.ApiResponse;
+import com.praveen.nexus.core.exception.ResourceNotFoundException;
 import com.praveen.nexus.core.model.Message;
 import com.praveen.nexus.core.model.User;
 import com.praveen.nexus.core.repository.UserRepository;
@@ -29,8 +31,9 @@ public class MessageController {
 
     private final UserRepository userRepository;
 
+    // CREATE MESSAGE
     @PostMapping
-    public ResponseEntity<Message> createMessage(
+    public ResponseEntity<ApiResponse<Message>> createMessage(
             @PathVariable String conversationId,
             @RequestParam String role,
             @RequestParam String content,
@@ -40,7 +43,7 @@ public class MessageController {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
         Message message = messageService.createMessage(
                 conversationId,
@@ -51,11 +54,18 @@ public class MessageController {
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(message);
+                .body(
+                        new ApiResponse<>(
+                                true,
+                                "Message Created Successfully",
+                                message
+                        )
+                );
     }
 
+    // GET CONVERSATION MESSAGES
     @GetMapping
-    public ResponseEntity<List<Message>> getMessages(
+    public ResponseEntity<ApiResponse<List<Message>>> getMessages(
             @PathVariable String conversationId,
             Authentication authentication) {
 
@@ -63,15 +73,23 @@ public class MessageController {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
-        return ResponseEntity.ok(
+        List<Message> messages =
                 messageService.getConversationMessages(
                         conversationId,
-                        user.getId())
+                        user.getId());
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Messages Retrieved Successfully",
+                        messages
+                )
         );
     }
 
+    // DELETE MESSAGE
     @DeleteMapping("/{messageId}")
     public ResponseEntity<Void> deleteMessage(
             @PathVariable String conversationId,
@@ -82,7 +100,7 @@ public class MessageController {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                        new ResourceNotFoundException("User not found"));
 
         messageService.deleteMessage(
                 conversationId,

@@ -63,11 +63,21 @@ public class SecurityConfig {
                     "/users/login"
                 ).permitAll()
 
-                // USER + ADMIN can read users
+                // Admin-only user listing and database metadata
                 .requestMatchers(
                     HttpMethod.GET,
-                    "/users",
-                    "/users/**"
+                    "/users"
+                ).hasRole("ADMIN")
+
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/users/dbinfo"
+                ).hasRole("ADMIN")
+
+                // USER can view only their own profile; ADMIN can view any user
+                .requestMatchers(
+                    HttpMethod.GET,
+                    "/users/{id}"
                 ).hasAnyRole("USER", "ADMIN")
 
                 // Only ADMIN can update
