@@ -29,7 +29,8 @@ public class AiClient {
 
     public String getAiResponse(
             String message,
-            List<Message> conversationHistory) {
+            List<Message> conversationHistory,
+            String assistantName) {
 
         // Build conversation history for AI Service
         List<ConversationMessage> history = new ArrayList<>();
@@ -42,7 +43,7 @@ public class AiClient {
             }
         }
 
-        AiRequest request = new AiRequest(message, history);
+        AiRequest request = new AiRequest(message, history, assistantName);
 
         AiResponse response = restClient
                 .post()
@@ -66,6 +67,8 @@ public class AiClient {
         private String message;
 
         private List<ConversationMessage> conversationHistory;
+
+        private String assistantName;
     }
 
     @Data

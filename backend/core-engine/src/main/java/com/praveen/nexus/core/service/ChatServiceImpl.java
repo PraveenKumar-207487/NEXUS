@@ -72,7 +72,8 @@ public class ChatServiceImpl implements ChatService {
         try {
             aiResponse = aiClient.getAiResponse(
                     request.getMessage(),
-                    conversationHistory);
+                    conversationHistory,
+                    request.getAssistantName());
 
         } catch (RestClientException e) {
 

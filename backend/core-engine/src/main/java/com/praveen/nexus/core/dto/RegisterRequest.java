@@ -4,7 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public class UserRequest {
+public class RegisterRequest {
 
     @NotBlank(message = "Name cannot be empty")
     private String name;
@@ -20,24 +20,19 @@ public class UserRequest {
     @Size(min = 8, message = "Password must contain at least 8 characters")
     private String password;
 
-    @NotBlank(message = "Role cannot be empty")
-    private String role;
-
-    public UserRequest() {
+    public RegisterRequest() {
     }
 
-    public UserRequest(
+    public RegisterRequest(
             String name,
             String assistantName,
             String email,
-            String password,
-            String role) {
+            String password) {
 
         this.name = name;
         this.assistantName = assistantName;
         this.email = email;
         this.password = password;
-        this.role = role;
     }
 
     public String getName() {
@@ -70,13 +65,5 @@ public class UserRequest {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
     }
 }

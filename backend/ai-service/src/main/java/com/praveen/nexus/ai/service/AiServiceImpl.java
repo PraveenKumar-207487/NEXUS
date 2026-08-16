@@ -21,11 +21,16 @@ public class AiServiceImpl implements AiService {
 
         List<GroqClient.GroqMessage> messages = new ArrayList<>();
 
+        String assistantName = request.getAssistantName();
+        if (assistantName == null || assistantName.isBlank()) {
+            assistantName = "Jarvis";
+        }
+
         // System instruction
         messages.add(
                 new GroqClient.GroqMessage(
                         "system",
-                        "You are NEXUS AI, a helpful and intelligent AI assistant. " +
+                        "You are " + assistantName + ", the user's personal AI assistant. " +
                         "Answer clearly and naturally. Use the conversation history " +
                         "to maintain context."
                 )

@@ -12,6 +12,7 @@ public class User {
     private String id;
 
     private String name;
+    private String assistantName;
     private String email;
     private String password;
     private String role;
@@ -22,9 +23,18 @@ public class User {
     }
 
     // Parameterized Constructor
-    public User(String id, String name, String email, String password, String role, LocalDateTime createdAt) {
+    public User(
+            String id,
+            String name,
+            String assistantName,
+            String email,
+            String password,
+            String role,
+            LocalDateTime createdAt) {
+
         this.id = id;
         this.name = name;
+        this.assistantName = assistantName;
         this.email = email;
         this.password = password;
         this.role = role;
@@ -47,6 +57,14 @@ public class User {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getAssistantName() {
+        return assistantName;
+    }
+
+    public void setAssistantName(String assistantName) {
+        this.assistantName = assistantName;
     }
 
     public String getEmail() {

@@ -5,12 +5,15 @@ import java.util.Optional;
 
 import com.praveen.nexus.core.dto.LoginRequest;
 import com.praveen.nexus.core.dto.LoginResponse;
+import com.praveen.nexus.core.dto.RegisterRequest;
 import com.praveen.nexus.core.dto.UserRequest;
 import com.praveen.nexus.core.dto.UserResponse;
 
 public interface UserService {
 
     UserResponse saveUser(UserRequest request);
+
+    UserResponse registerUser(RegisterRequest request);
 
     List<UserResponse> getAllUsers();
 
@@ -29,5 +32,6 @@ public interface UserService {
     boolean deleteUser(String id, String authenticatedEmail);
 
     String getDatabaseInfo();
+
     LoginResponse login(LoginRequest request);
 }

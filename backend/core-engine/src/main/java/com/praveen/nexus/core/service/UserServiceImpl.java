@@ -1,4 +1,3 @@
-
 package com.praveen.nexus.core.service;
 
 import java.time.LocalDateTime;
@@ -16,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.praveen.nexus.core.dto.LoginRequest;
 import com.praveen.nexus.core.dto.LoginResponse;
+import com.praveen.nexus.core.dto.RegisterRequest;
 import com.praveen.nexus.core.dto.UserRequest;
 import com.praveen.nexus.core.dto.UserResponse;
 import com.praveen.nexus.core.exception.UserAlreadyExistsException;
@@ -70,6 +70,34 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserResponse registerUser(RegisterRequest request) {
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new UserAlreadyExistsException("Email already exists");
+        }
+
+        User user = new User();
+
+        user.setName(request.getName());
+        user.setAssistantName(request.getAssistantName());
+        user.setEmail(request.getEmail());
+
+        // Hash password before storing in MongoDB
+        user.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
+
+        // Public registration can only create USER accounts
+        user.setRole("USER");
+
+        user.setCreatedAt(LocalDateTime.now());
+
+        User savedUser = userRepository.save(user);
+
+        return mapToResponse(savedUser);
+    }
+
+    @Override
     public List<UserResponse> getAllUsers() {
 
         return userRepository.findAll()
@@ -103,7 +131,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Optional<UserResponse> getUserById(String id, String authenticatedEmail) {
+    public Optional<UserResponse> getUserById(
+            String id,
+            String authenticatedEmail) {
 
         User targetUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -121,6 +151,7 @@ public class UserServiceImpl implements UserService {
 
         if (targetUser.getEmail() != null
                 && targetUser.getEmail().equalsIgnoreCase(authenticatedEmail)) {
+
             return Optional.of(mapToResponse(targetUser));
         }
 
@@ -130,7 +161,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponse updateUser(String id, UserRequest request) {
+    public UserResponse updateUser(
+            String id,
+            UserRequest request) {
 
         Optional<User> existingUser = userRepository.findById(id);
 
@@ -156,7 +189,10 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserResponse updateUser(String id, String authenticatedEmail, UserRequest request) {
+    public UserResponse updateUser(
+            String id,
+            String authenticatedEmail,
+            UserRequest request) {
 
         User requester = userRepository.findByEmail(authenticatedEmail)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -176,7 +212,11 @@ public class UserServiceImpl implements UserService {
 
         existingUser.setName(request.getName());
         existingUser.setEmail(request.getEmail());
-        existingUser.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        existingUser.setPassword(
+                passwordEncoder.encode(request.getPassword())
+        );
+
         existingUser.setRole(request.getRole());
 
         User updatedUser = userRepository.save(existingUser);
@@ -196,7 +236,9 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public boolean deleteUser(String id, String authenticatedEmail) {
+    public boolean deleteUser(
+            String id,
+            String authenticatedEmail) {
 
         User requester = userRepository.findByEmail(authenticatedEmail)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -216,6 +258,7 @@ public class UserServiceImpl implements UserService {
         }
 
         userRepository.deleteById(id);
+
         return true;
     }
 
@@ -224,9 +267,11 @@ public class UserServiceImpl implements UserService {
         return new UserResponse(
                 user.getId(),
                 user.getName(),
+                user.getAssistantName(),
                 user.getEmail(),
                 user.getRole(),
-                user.getCreatedAt());
+                user.getCreatedAt()
+        );
     }
 
     @Override
@@ -234,7 +279,8 @@ public class UserServiceImpl implements UserService {
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() ->
-                        new BadCredentialsException("Invalid email or password"));
+                        new BadCredentialsException(
+                                "Invalid email or password"));
 
         boolean passwordMatches = passwordEncoder.matches(
                 request.getPassword(),
@@ -242,7 +288,8 @@ public class UserServiceImpl implements UserService {
         );
 
         if (!passwordMatches) {
-            throw new BadCredentialsException("Invalid email or password");
+            throw new BadCredentialsException(
+                    "Invalid email or password");
         }
 
         String token = jwtService.generateToken(
@@ -254,6 +301,7 @@ public class UserServiceImpl implements UserService {
                 "Login successful",
                 user.getEmail(),
                 user.getRole(),
+                user.getAssistantName(),
                 token
         );
     }

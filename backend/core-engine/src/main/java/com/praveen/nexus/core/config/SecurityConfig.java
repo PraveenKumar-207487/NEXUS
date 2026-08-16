@@ -42,7 +42,6 @@ public class SecurityConfig {
                 })
             )
 
-            // JWT authentication is stateless
             .sessionManagement(session ->
                 session.sessionCreationPolicy(
                     SessionCreationPolicy.STATELESS
@@ -51,30 +50,32 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
 
-                // Registration
+                // Public registration
                 .requestMatchers(
                     HttpMethod.POST,
-                    "/users"
+                    "/users",
+                    "/users/register"
                 ).permitAll()
 
-                // Login
+                // Public login
                 .requestMatchers(
                     HttpMethod.POST,
                     "/users/login"
                 ).permitAll()
 
-                // Admin-only user listing and database metadata
+                // Admin-only user listing
                 .requestMatchers(
                     HttpMethod.GET,
                     "/users"
                 ).hasRole("ADMIN")
 
+                // Admin-only database information
                 .requestMatchers(
                     HttpMethod.GET,
                     "/users/dbinfo"
                 ).hasRole("ADMIN")
 
-                // USER can view only their own profile; ADMIN can view any user
+                // USER can view own profile, ADMIN can view any user
                 .requestMatchers(
                     HttpMethod.GET,
                     "/users/{id}"
@@ -96,7 +97,6 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
 
-            // JWT filter runs before Spring's authentication filter
             .addFilterBefore(
                 jwtAuthenticationFilter,
                 UsernamePasswordAuthenticationFilter.class

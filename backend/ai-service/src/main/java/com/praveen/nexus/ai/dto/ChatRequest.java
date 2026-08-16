@@ -15,6 +15,8 @@ public class ChatRequest {
 
     private List<ConversationMessage> conversationHistory;
 
+    private String assistantName;
+
     @Data
     @NoArgsConstructor
     @AllArgsConstructor

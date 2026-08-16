@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.praveen.nexus.core.dto.ApiResponse;
 import com.praveen.nexus.core.dto.LoginRequest;
 import com.praveen.nexus.core.dto.LoginResponse;
+import com.praveen.nexus.core.dto.RegisterRequest;
 import com.praveen.nexus.core.dto.UserRequest;
 import com.praveen.nexus.core.dto.UserResponse;
 import com.praveen.nexus.core.service.UserService;
@@ -33,7 +34,8 @@ public class UserController {
 
     // Create User
     @PostMapping
-    public ApiResponse<UserResponse> saveUser(@Valid @RequestBody UserRequest request) {
+    public ApiResponse<UserResponse> saveUser(
+            @Valid @RequestBody UserRequest request) {
 
         UserResponse savedUser = userService.saveUser(request);
 
@@ -44,11 +46,29 @@ public class UserController {
         );
     }
 
+    // Public User Registration
+    @PostMapping("/register")
+    public ResponseEntity<ApiResponse<UserResponse>> register(
+            @Valid @RequestBody RegisterRequest request) {
+
+        UserResponse response = userService.registerUser(request);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Registration successful",
+                        response
+                )
+        );
+    }
+
     // Get All Users
     @GetMapping
-    public ApiResponse<List<UserResponse>> getAllUsers(Authentication authentication) {
+    public ApiResponse<List<UserResponse>> getAllUsers(
+            Authentication authentication) {
 
-        List<UserResponse> users = userService.getAllUsers(authentication.getName());
+        List<UserResponse> users =
+                userService.getAllUsers(authentication.getName());
 
         return new ApiResponse<>(
                 true,
@@ -63,7 +83,11 @@ public class UserController {
             @PathVariable String id,
             Authentication authentication) {
 
-        Optional<UserResponse> user = userService.getUserById(id, authentication.getName());
+        Optional<UserResponse> user =
+                userService.getUserById(
+                        id,
+                        authentication.getName()
+                );
 
         if (user.isPresent()) {
 
@@ -88,7 +112,12 @@ public class UserController {
             @Valid @RequestBody UserRequest request,
             Authentication authentication) {
 
-        UserResponse updatedUser = userService.updateUser(id, authentication.getName(), request);
+        UserResponse updatedUser =
+                userService.updateUser(
+                        id,
+                        authentication.getName(),
+                        request
+                );
 
         if (updatedUser != null) {
 
@@ -112,7 +141,11 @@ public class UserController {
             @PathVariable String id,
             Authentication authentication) {
 
-        boolean deleted = userService.deleteUser(id, authentication.getName());
+        boolean deleted =
+                userService.deleteUser(
+                        id,
+                        authentication.getName()
+                );
 
         if (deleted) {
 
@@ -130,23 +163,26 @@ public class UserController {
         );
     }
 
+    // Database Information
     @GetMapping("/dbinfo")
-public ApiResponse<String> databaseInfo() {
+    public ApiResponse<String> databaseInfo() {
 
-    String databaseInfo = userService.getDatabaseInfo();
+        String databaseInfo = userService.getDatabaseInfo();
 
-    return new ApiResponse<>(
-            true,
-            "Database information retrieved successfully",
-            databaseInfo
-    );
-}
+        return new ApiResponse<>(
+                true,
+                "Database information retrieved successfully",
+                databaseInfo
+        );
+    }
 
+    // Login
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<LoginResponse>> login(
             @Valid @RequestBody LoginRequest request) {
 
-        LoginResponse response = userService.login(request);
+        LoginResponse response =
+                userService.login(request);
 
         return ResponseEntity.ok(
                 new ApiResponse<>(
