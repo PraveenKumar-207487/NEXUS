@@ -49,16 +49,36 @@ function Login({ onLogin }) {
       const loginData = response?.data?.data
 
       if (!loginData?.token) {
-        throw new Error('Login response did not include a JWT token.')
+        throw new Error(
+          'Login response did not include a JWT token.'
+        )
       }
 
       localStorage.setItem('nexusToken', loginData.token)
-      localStorage.setItem('nexusEmail', loginData.email || trimmedEmail)
-      localStorage.setItem('nexusRole', loginData.role || 'USER')
+
+      localStorage.setItem(
+        'nexusEmail',
+        loginData.email || trimmedEmail
+      )
+
+      localStorage.setItem(
+        'nexusName',
+        loginData.name || 'User'
+      )
+
+      localStorage.setItem(
+        'nexusRole',
+        loginData.role || 'USER'
+      )
+
       localStorage.setItem(
         'nexusAssistantName',
-        loginData.assistantName || 'NEXUS'
+        loginData.assistantName || 'JARVIS'
       )
+
+      // Prevent the previous account's active conversation
+      // from being reused after another account logs in.
+      localStorage.removeItem('nexusConversationId')
 
       onLogin(loginData)
     } catch (error) {
@@ -69,7 +89,9 @@ function Login({ onLogin }) {
       } else if (error.message) {
         setError(error.message)
       } else {
-        setError('Unable to connect to NEXUS Core Engine.')
+        setError(
+          'Unable to connect to NEXUS Core Engine.'
+        )
       }
     } finally {
       setLoading(false)
@@ -93,7 +115,9 @@ function Login({ onLogin }) {
     }
 
     if (password.length < 8) {
-      setError('Password must contain at least 8 characters.')
+      setError(
+        'Password must contain at least 8 characters.'
+      )
       return
     }
 
@@ -118,14 +142,15 @@ function Login({ onLogin }) {
         setAssistantName('')
         setPassword('')
       }, 1800)
-
     } catch (error) {
       console.error('Registration failed:', error)
 
       if (error.response?.data?.message) {
         setError(error.response.data.message)
       } else {
-        setError('Unable to create your NEXUS profile.')
+        setError(
+          'Unable to create your NEXUS profile.'
+        )
       }
     } finally {
       setLoading(false)
@@ -141,7 +166,6 @@ function Login({ onLogin }) {
 
   return (
     <div className="login-page">
-
       {/* ================= BACKGROUND ================= */}
 
       <div className="login-grid"></div>
@@ -153,7 +177,6 @@ function Login({ onLogin }) {
       {/* ================= MAIN ================= */}
 
       <div className="login-container">
-
         {/* SYSTEM LABEL */}
 
         <div className="system-label">
@@ -164,7 +187,6 @@ function Login({ onLogin }) {
         {/* ================= REACTOR ================= */}
 
         <div className="login-core">
-
           <div className="core-orbit orbit-one"></div>
           <div className="core-orbit orbit-two"></div>
           <div className="core-orbit orbit-three"></div>
@@ -180,13 +202,11 @@ function Login({ onLogin }) {
           </div>
 
           <div className="core-scan"></div>
-
         </div>
 
         {/* ================= HEADING ================= */}
 
         <div className="login-heading">
-
           <span className="eyebrow">
             NEXUS INTELLIGENCE SYSTEM
           </span>
@@ -202,7 +222,6 @@ function Login({ onLogin }) {
               ? 'Create your personal AI command system.'
               : 'Authenticate to access your command center.'}
           </p>
-
         </div>
 
         {/* ================= FORM ================= */}
@@ -217,7 +236,6 @@ function Login({ onLogin }) {
             isRegistering ? 'register-mode' : ''
           }`}
         >
-
           {/* NAME */}
 
           {isRegistering && (
@@ -315,7 +333,6 @@ function Login({ onLogin }) {
             className="login-button"
             disabled={loading}
           >
-
             {loading ? (
               <>
                 <span className="spinner"></span>
@@ -339,9 +356,7 @@ function Login({ onLogin }) {
                 )}
               </>
             )}
-
           </button>
-
         </form>
 
         {/* ================= MODE SWITCH ================= */}
@@ -352,7 +367,6 @@ function Login({ onLogin }) {
           onClick={switchMode}
           disabled={loading}
         >
-
           {isRegistering ? (
             <>
               <ArrowLeft size={15} />
@@ -365,13 +379,11 @@ function Login({ onLogin }) {
               <strong>Initialize your AI</strong>
             </>
           )}
-
         </button>
 
         {/* ================= SECURITY ================= */}
 
         <div className="security-note">
-
           <ShieldCheck size={15} />
 
           <span>
@@ -382,16 +394,12 @@ function Login({ onLogin }) {
             //
           </span>
 
-          <span>
-            ENCRYPTED CORE
-          </span>
-
+          <span>ENCRYPTED CORE</span>
         </div>
 
         {/* ================= FOOTER ================= */}
 
         <div className="login-footer">
-
           <span>SYS.NEXUS</span>
 
           <span className="footer-status">
@@ -400,11 +408,8 @@ function Login({ onLogin }) {
           </span>
 
           <span>v1.0.0</span>
-
         </div>
-
       </div>
-
     </div>
   )
 }

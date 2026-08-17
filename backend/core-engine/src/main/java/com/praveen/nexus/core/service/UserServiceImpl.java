@@ -274,35 +274,35 @@ public class UserServiceImpl implements UserService {
         );
     }
 
-    @Override
-    public LoginResponse login(LoginRequest request) {
+   @Override
+public LoginResponse login(LoginRequest request) {
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() ->
-                        new BadCredentialsException(
-                                "Invalid email or password"));
+    User user = userRepository.findByEmail(request.getEmail())
+            .orElseThrow(() ->
+                    new BadCredentialsException(
+                            "Invalid email or password"));
 
-        boolean passwordMatches = passwordEncoder.matches(
-                request.getPassword(),
-                user.getPassword()
-        );
+    boolean passwordMatches = passwordEncoder.matches(
+            request.getPassword(),
+            user.getPassword()
+    );
 
-        if (!passwordMatches) {
-            throw new BadCredentialsException(
-                    "Invalid email or password");
-        }
-
-        String token = jwtService.generateToken(
-                user.getEmail(),
-                user.getRole()
-        );
-
-        return new LoginResponse(
-                "Login successful",
-                user.getEmail(),
-                user.getRole(),
-                user.getAssistantName(),
-                token
-        );
+    if (!passwordMatches) {
+        throw new BadCredentialsException(
+                "Invalid email or password");
     }
-}
+
+    String token = jwtService.generateToken(
+            user.getEmail(),
+            user.getRole()
+    );
+
+    return new LoginResponse(
+            "Login successful",
+            user.getName(),              // NEW
+            user.getEmail(),
+            user.getRole(),
+            user.getAssistantName(),
+            token
+    );
+}}

@@ -40,8 +40,11 @@ const systemStats = [
 ]
 
 function App() {
+  const getStoredUserName = () =>
+    localStorage.getItem('nexusName') || 'User'
+
   const getStoredAssistantName = () =>
-    localStorage.getItem('nexusAssistantName') || 'NEXUS'
+    localStorage.getItem('nexusAssistantName') || 'JARVIS'
 
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
@@ -50,12 +53,14 @@ function App() {
     localStorage.getItem('nexusConversationId') || ''
   )
   const [activeView, setActiveView] = useState('command')
+  const [userName, setUserName] = useState(getStoredUserName())
   const [assistantName, setAssistantName] = useState(getStoredAssistantName())
   const [isListening, setIsListening] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [voiceError, setVoiceError] = useState('')
   const [greeting, setGreeting] = useState(getGreeting)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
   const recognitionRef = useRef(null)
 
   const [authenticated, setAuthenticated] = useState(
@@ -126,6 +131,7 @@ function App() {
   useEffect(() => {
     if (!authenticated) return
 
+    setUserName(getStoredUserName())
     setAssistantName(getStoredAssistantName())
     loadConversations()
   }, [authenticated])
@@ -143,11 +149,28 @@ function App() {
   }, [authenticated, selectedConversationId])
 
   const handleLogin = (userData = null) => {
-    setAssistantName(
+    const loggedInName =
+      userData?.name ||
+      localStorage.getItem('nexusName') ||
+      'User'
+
+    const loggedInAssistant =
       userData?.assistantName ||
-        localStorage.getItem('nexusAssistantName') ||
-        'NEXUS'
-    )
+      localStorage.getItem('nexusAssistantName') ||
+      'JARVIS'
+
+    localStorage.setItem('nexusName', loggedInName)
+    localStorage.setItem('nexusAssistantName', loggedInAssistant)
+
+    // Do not reuse the previous account's active conversation.
+    localStorage.removeItem('nexusConversationId')
+
+    setUserName(loggedInName)
+    setAssistantName(loggedInAssistant)
+    setSelectedConversationId('')
+    setMessages([])
+    setConversations([])
+    setActiveView('command')
     setAuthenticated(true)
   }
 
@@ -156,6 +179,7 @@ function App() {
 
     localStorage.removeItem('nexusToken')
     localStorage.removeItem('nexusEmail')
+    localStorage.removeItem('nexusName')
     localStorage.removeItem('nexusRole')
     localStorage.removeItem('nexusAssistantName')
     localStorage.removeItem('nexusConversationId')
@@ -164,8 +188,10 @@ function App() {
     setSelectedConversationId('')
     setMessages([])
     setConversations([])
-    setAssistantName('NEXUS')
+    setUserName('User')
+    setAssistantName('JARVIS')
     setVoiceError('')
+    setMessage('')
     setActiveView('command')
   }
 
@@ -189,6 +215,7 @@ function App() {
 
     setSelectedConversationId(nextConversationId)
     localStorage.setItem('nexusConversationId', nextConversationId)
+
     await loadConversations()
 
     return nextConversationId
@@ -212,6 +239,7 @@ function App() {
       localStorage.setItem('nexusConversationId', nextConversationId)
       setActiveView('conversations')
       setIsMobileMenuOpen(false)
+
       await loadConversations()
     } catch (error) {
       console.error('Failed to create conversation:', error)
@@ -223,6 +251,7 @@ function App() {
     localStorage.setItem('nexusConversationId', conversation.id)
     setActiveView('conversations')
     setIsMobileMenuOpen(false)
+
     await loadConversationMessages(conversation.id)
   }
 
@@ -265,9 +294,11 @@ function App() {
       ])
 
       setMessage('')
+
       await loadConversations()
     } catch (error) {
       console.error('Chat request failed:', error)
+
       setVoiceError(
         error.response?.data?.message ||
           'NEXUS could not complete that request. Please try again.'
@@ -296,6 +327,7 @@ function App() {
     setVoiceError('')
 
     const recognition = new SpeechRecognition()
+
     recognition.lang = 'en-US'
     recognition.continuous = false
     recognition.interimResults = false
@@ -348,7 +380,9 @@ function App() {
         <input
           type="text"
           placeholder={
-            isListening ? 'Listening for your command...' : 'Type your command...'
+            isListening
+              ? 'Listening for your command...'
+              : 'Type your command...'
           }
           value={message}
           onChange={(event) => setMessage(event.target.value)}
@@ -401,7 +435,10 @@ function App() {
           </button>
         </div>
 
-        <button className="new-conversation-button" onClick={handleNewConversation}>
+        <button
+          className="new-conversation-button"
+          onClick={handleNewConversation}
+        >
           <Plus size={18} />
           New Conversation
         </button>
@@ -440,6 +477,7 @@ function App() {
         <div className="sidebar-conversations">
           <div className="sidebar-label">
             RECENT CONVERSATIONS
+
             <button onClick={() => setActiveView('conversations')}>
               <ChevronRight size={16} />
             </button>
@@ -451,13 +489,18 @@ function App() {
               key={conversation.id}
               onClick={() => handleSelectConversation(conversation)}
             >
-              <MessageSquare size={14} />
-              <span>{conversation.title || 'Conversation'}</span>
+              <MessageSquare size={15} />
+
+              <span>
+                {conversation.title || 'Conversation'}
+              </span>
             </button>
           ))}
 
           {conversations.length === 0 && (
-            <p className="no-recent-conversations">No conversations yet.</p>
+            <p className="no-recent-conversations">
+              No conversations yet.
+            </p>
           )}
         </div>
 
@@ -475,8 +518,13 @@ function App() {
           </div>
 
           <div className="core-mini-stats">
-            <span>AI ENGINE <strong>READY</strong></span>
-            <span>SECURITY <strong>ACTIVE</strong></span>
+            <span>
+              AI ENGINE <strong>READY</strong>
+            </span>
+
+            <span>
+              SECURITY <strong>ACTIVE</strong>
+            </span>
           </div>
         </div>
 
@@ -484,6 +532,7 @@ function App() {
           <button title="Settings">
             <Settings size={18} />
           </button>
+
           <button onClick={handleLogout} title="Log out">
             <Power size={18} />
           </button>
@@ -509,7 +558,10 @@ function App() {
 
           <div className="header-title">
             <span className="header-dot" />
-            {activeView === 'command' ? 'COMMAND CENTER' : 'CONVERSATIONS'}
+
+            {activeView === 'command'
+              ? 'COMMAND CENTER'
+              : 'CONVERSATIONS'}
           </div>
 
           <div className="header-status">
@@ -519,6 +571,7 @@ function App() {
                 minute: '2-digit',
               })}
             </span>
+
             <Radio size={18} />
             <Settings size={18} />
           </div>
@@ -528,11 +581,17 @@ function App() {
           <section className="command-view">
             <div className="command-topline">
               <div>
-                <span className="eyebrow">NEXUS INTELLIGENCE SYSTEM</span>
+                <span className="eyebrow">
+                  NEXUS INTELLIGENCE SYSTEM
+                </span>
+
                 <h1>
-                  {greeting}, <span>Praveen.</span>
+                  {greeting}, <span>{userName}.</span>
                 </h1>
-                <p>NEXUS is ready for your next command.</p>
+
+                <p>
+                  {assistantName} is ready for your next command.
+                </p>
               </div>
 
               <div className="command-online-badge">
@@ -543,38 +602,59 @@ function App() {
 
             <div className="command-dashboard">
               <div className="left-metric-stack">
-                {systemStats.map(({ label, value, icon: Icon }) => (
-                  <article className="metric-card" key={label}>
-                    <div className="metric-icon">
-                      <Icon size={18} />
-                    </div>
-                    <div>
-                      <small>{label}</small>
-                      <strong>{value}</strong>
-                    </div>
-                  </article>
-                ))}
+                {systemStats.map(
+                  ({ label, value, icon: Icon }) => (
+                    <article
+                      className="metric-card"
+                      key={label}
+                    >
+                      <div className="metric-icon">
+                        <Icon size={18} />
+                      </div>
+
+                      <div>
+                        <small>{label}</small>
+                        <strong>{value}</strong>
+                      </div>
+                    </article>
+                  )
+                )}
               </div>
 
-              <div className={`nexus-core-stage ${isListening ? 'listening' : ''}`}>
+              <div
+                className={`nexus-core-stage ${
+                  isListening ? 'listening' : ''
+                }`}
+              >
                 <div className="core-data-line left-line" />
                 <div className="core-data-line right-line" />
 
                 <div className="orbit orbit-large" />
                 <div className="orbit orbit-medium" />
                 <div className="orbit orbit-small" />
+
                 <div className="scan-beam" />
 
                 <div className="nexus-core">
                   <div className="core-inner-grid" />
+
                   <div className="core-center-light" />
-                  <strong>{assistantName.charAt(0).toUpperCase()}</strong>
-                  <span>{assistantName.toUpperCase()}</span>
+
+                  <strong>
+                    {assistantName.charAt(0).toUpperCase()}
+                  </strong>
+
+                  <span>
+                    {assistantName.toUpperCase()}
+                  </span>
                 </div>
 
                 <div className="core-caption">
                   <span className="core-caption-dot" />
-                  {isListening ? 'VOICE LINK ACTIVE' : 'NEXUS CORE STANDBY'}
+
+                  {isListening
+                    ? 'VOICE LINK ACTIVE'
+                    : `${assistantName.toUpperCase()} CORE STANDBY`}
                 </div>
               </div>
 
@@ -584,7 +664,9 @@ function App() {
                     <Cpu size={17} />
                     ACTIVE PROCESSES
                   </div>
+
                   <strong>128</strong>
+
                   <span>AI modules available</span>
                 </article>
 
@@ -593,7 +675,9 @@ function App() {
                     <Network size={17} />
                     DATA FLOW
                   </div>
+
                   <strong>2.7 TB/s</strong>
+
                   <span>Secure connection active</span>
                 </article>
 
@@ -602,33 +686,50 @@ function App() {
                     <ShieldCheck size={17} />
                     SECURITY
                   </div>
+
                   <strong>PROTECTED</strong>
+
                   <span>All systems secure</span>
                 </article>
               </div>
             </div>
 
-            <div className={`voice-link-panel ${isListening ? 'active' : ''}`}>
+            <div
+              className={`voice-link-panel ${
+                isListening ? 'active' : ''
+              }`}
+            >
               <div className="voice-link-icon">
-                <Mic size={25} />
+                <Mic size={20} />
               </div>
 
               <div className="voice-link-content">
-                <span>VOICE LINK</span>
+                <span>
+                  {isListening
+                    ? 'VOICE LINK ACTIVE'
+                    : 'VOICE COMMAND LINK'}
+                </span>
+
                 <div className="voice-wave">
-                  {Array.from({ length: 46 }).map((_, index) => (
-                    <i
-                      key={index}
-                      style={{
-                        height: `${5 + (index % 9) * 2}px`,
-                        animationDelay: `${index * -0.035}s`,
-                      }}
-                    />
-                  ))}
+                  {Array.from({ length: 28 }).map(
+                    (_, index) => (
+                      <i
+                        key={index}
+                        style={{
+                          height: `${7 + ((index * 11) % 15)}px`,
+                          animationDelay: `${index * 0.04}s`,
+                        }}
+                      />
+                    )
+                  )}
                 </div>
               </div>
 
-              <small>{isListening ? 'LISTENING...' : 'VOICE READY'}</small>
+              <small>
+                {isListening
+                  ? 'LISTENING...'
+                  : 'VOICE READY'}
+              </small>
             </div>
 
             {messages.length > 0 && (
@@ -639,8 +740,11 @@ function App() {
                     key={entry.id}
                   >
                     <span>
-                      {entry.role === 'USER' ? 'YOU' : assistantName.toUpperCase()}
+                      {entry.role === 'USER'
+                        ? 'YOU'
+                        : assistantName.toUpperCase()}
                     </span>
+
                     <p>{entry.content}</p>
                   </div>
                 ))}
@@ -651,15 +755,30 @@ function App() {
 
             <div className="command-suggestions">
               <span>QUICK COMMANDS</span>
-              <button onClick={() => setMessage('What can you do?')}>
+
+              <button
+                onClick={() =>
+                  setMessage('What can you do?')
+                }
+              >
                 <Sparkles size={14} />
                 What can you do?
               </button>
-              <button onClick={() => setMessage('Show my conversations')}>
+
+              <button
+                onClick={() =>
+                  setMessage('Show my conversations')
+                }
+              >
                 <MessageSquare size={14} />
                 Show conversations
               </button>
-              <button onClick={() => setMessage('System status')}>
+
+              <button
+                onClick={() =>
+                  setMessage('System status')
+                }
+              >
                 <Activity size={14} />
                 System status
               </button>
@@ -670,11 +789,17 @@ function App() {
             <div className="conversation-list-panel">
               <div className="conversation-panel-header">
                 <div>
-                  <span className="eyebrow">NEXUS ARCHIVE</span>
+                  <span className="eyebrow">
+                    NEXUS ARCHIVE
+                  </span>
+
                   <h2>Conversations</h2>
                 </div>
 
-                <button onClick={handleNewConversation} title="New conversation">
+                <button
+                  onClick={handleNewConversation}
+                  title="New conversation"
+                >
                   <Plus size={19} />
                 </button>
               </div>
@@ -690,19 +815,34 @@ function App() {
                     <button
                       key={conversation.id}
                       className={`conversation-row ${
-                        selectedConversationId === conversation.id ? 'selected' : ''
+                        selectedConversationId ===
+                        conversation.id
+                          ? 'selected'
+                          : ''
                       }`}
-                      onClick={() => handleSelectConversation(conversation)}
+                      onClick={() =>
+                        handleSelectConversation(
+                          conversation
+                        )
+                      }
                     >
                       <MessageSquare size={17} />
+
                       <span>
-                        <strong>{conversation.title || 'Conversation'}</strong>
+                        <strong>
+                          {conversation.title ||
+                            'Conversation'}
+                        </strong>
+
                         <small>
                           {conversation.createdAt
-                            ? new Date(conversation.createdAt).toLocaleDateString()
+                            ? new Date(
+                                conversation.createdAt
+                              ).toLocaleDateString()
                             : 'Recent'}
                         </small>
                       </span>
+
                       <ChevronRight size={16} />
                     </button>
                   ))
@@ -713,7 +853,10 @@ function App() {
             <div className="conversation-thread-panel">
               <div className="conversation-panel-header thread-header">
                 <div>
-                  <span className="eyebrow">CONVERSATION THREAD</span>
+                  <span className="eyebrow">
+                    CONVERSATION THREAD
+                  </span>
+
                   <h2>
                     {selectedConversationId
                       ? 'Continue your conversation'
@@ -731,14 +874,28 @@ function App() {
                 {!selectedConversationId ? (
                   <div className="empty-thread">
                     <Bot size={38} />
-                    <h3>No conversation selected</h3>
-                    <p>Select a saved conversation or create a new one.</p>
+
+                    <h3>
+                      No conversation selected
+                    </h3>
+
+                    <p>
+                      Select a saved conversation or
+                      create a new one.
+                    </p>
                   </div>
                 ) : messages.length === 0 ? (
                   <div className="empty-thread">
                     <Sparkles size={38} />
-                    <h3>Start the conversation</h3>
-                    <p>Send a command to begin talking with NEXUS.</p>
+
+                    <h3>
+                      Start the conversation
+                    </h3>
+
+                    <p>
+                      Send a command to begin talking
+                      with {assistantName}.
+                    </p>
                   </div>
                 ) : (
                   messages.map((entry) => (
@@ -747,15 +904,20 @@ function App() {
                       className={`thread-message ${entry.role.toLowerCase()}`}
                     >
                       <div className="thread-message-label">
-                        {entry.role === 'USER' ? 'YOU' : assistantName.toUpperCase()}
+                        {entry.role === 'USER'
+                          ? 'YOU'
+                          : assistantName.toUpperCase()}
                       </div>
+
                       <p>{entry.content}</p>
                     </article>
                   ))
                 )}
               </div>
 
-              <div className="conversation-composer">{renderComposer()}</div>
+              <div className="conversation-composer">
+                {renderComposer()}
+              </div>
             </div>
           </section>
         )}
