@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Login from './pages/Login'
+import Files from './pages/Files'
 import api from './api/axios'
 import {
   Activity,
@@ -8,7 +9,7 @@ import {
   ChevronRight,
   Cpu,
   Database,
-  LockKeyhole,
+  FileText,
   Menu,
   MessageSquare,
   Mic,
@@ -20,6 +21,8 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  Square,
+  Volume2,
   X,
   Zap,
 } from 'lucide-react'
@@ -49,23 +52,176 @@ function App() {
   const [message, setMessage] = useState('')
   const [messages, setMessages] = useState([])
   const [conversations, setConversations] = useState([])
-  const [selectedConversationId, setSelectedConversationId] = useState(
-    localStorage.getItem('nexusConversationId') || ''
-  )
+
+  const [selectedConversationId, setSelectedConversationId] =
+    useState(
+      localStorage.getItem('nexusConversationId') || ''
+    )
+
   const [activeView, setActiveView] = useState('command')
-  const [userName, setUserName] = useState(getStoredUserName())
-  const [assistantName, setAssistantName] = useState(getStoredAssistantName())
+
+  const [userName, setUserName] =
+    useState(getStoredUserName())
+
+  const [assistantName, setAssistantName] =
+    useState(getStoredAssistantName())
+
   const [isListening, setIsListening] = useState(false)
   const [isSending, setIsSending] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
   const [voiceError, setVoiceError] = useState('')
   const [greeting, setGreeting] = useState(getGreeting)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] =
+    useState(false)
 
   const recognitionRef = useRef(null)
+  const speakRef = useRef(null)
 
   const [authenticated, setAuthenticated] = useState(
     Boolean(localStorage.getItem('nexusToken'))
   )
+
+  /*
+   * Load browser voices.
+   */
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return
+
+    window.speechSynthesis.getVoices()
+
+    const handleVoicesChanged = () => {
+      window.speechSynthesis.getVoices()
+    }
+
+    window.speechSynthesis.addEventListener(
+      'voiceschanged',
+      handleVoicesChanged
+    )
+
+    return () => {
+      window.speechSynthesis.removeEventListener(
+        'voiceschanged',
+        handleVoicesChanged
+      )
+    }
+  }, [])
+
+  /*
+   * JARVIS speech function.
+   */
+  const speak = (text) => {
+    if (!text) return
+
+    if (!('speechSynthesis' in window)) {
+      setVoiceError(
+        'Speech output is not supported by this browser. Please use Chrome or Edge.'
+      )
+      setIsSpeaking(false)
+      return
+    }
+
+    try {
+      window.speechSynthesis.cancel()
+
+      const voices = window.speechSynthesis.getVoices()
+
+      const preferredVoice =
+        voices.find(
+          (voice) =>
+            voice.lang === 'en-US' &&
+            /Google US English|Microsoft|David|Mark|Guy/i.test(
+              voice.name
+            )
+        ) ||
+        voices.find(
+          (voice) =>
+            voice.lang.startsWith('en-US') &&
+            !/female|zira|samantha|susan/i.test(
+              voice.name
+            )
+        ) ||
+        voices.find((voice) =>
+          voice.lang.startsWith('en-US')
+        ) ||
+        voices.find((voice) =>
+          voice.lang.startsWith('en')
+        ) ||
+        voices[0]
+
+      const utterance =
+        new SpeechSynthesisUtterance(text)
+
+      if (preferredVoice) {
+        utterance.voice = preferredVoice
+        utterance.lang =
+          preferredVoice.lang || 'en-US'
+      } else {
+        utterance.lang = 'en-US'
+      }
+
+      utterance.rate = 0.9
+      utterance.pitch = 0.72
+      utterance.volume = 1
+
+      utterance.onstart = () => {
+        setIsSpeaking(true)
+        setVoiceError('')
+      }
+
+      utterance.onend = () => {
+        setIsSpeaking(false)
+        speakRef.current = null
+      }
+
+      utterance.onerror = (event) => {
+        console.error(
+          'Speech synthesis error:',
+          event
+        )
+
+        setIsSpeaking(false)
+        speakRef.current = null
+
+        if (
+          event.error !== 'canceled' &&
+          event.error !== 'interrupted'
+        ) {
+          setVoiceError(
+            'JARVIS could not complete the voice response.'
+          )
+        }
+      }
+
+      speakRef.current = utterance
+      setIsSpeaking(true)
+
+      window.speechSynthesis.speak(utterance)
+    } catch (error) {
+      console.error(
+        'Speech synthesis failed:',
+        error
+      )
+
+      setIsSpeaking(false)
+      speakRef.current = null
+
+      setVoiceError(
+        'JARVIS voice output could not be started.'
+      )
+    }
+  }
+
+  /*
+   * Stop JARVIS from speaking.
+   */
+  const handleStopSpeaking = () => {
+    if (!('speechSynthesis' in window)) return
+
+    window.speechSynthesis.cancel()
+
+    speakRef.current = null
+    setIsSpeaking(false)
+  }
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -76,43 +232,67 @@ function App() {
   }, [])
 
   useEffect(() => {
-    return () => recognitionRef.current?.stop()
+    return () => {
+      recognitionRef.current?.stop()
+      window.speechSynthesis?.cancel()
+    }
   }, [])
 
+  /*
+   * Load conversations.
+   */
   const loadConversations = async () => {
     try {
-      const response = await api.get('/conversations')
-      const nextConversations = response?.data?.data || []
+      const response =
+        await api.get('/conversations')
+
+      const nextConversations =
+        response?.data?.data || []
 
       setConversations(nextConversations)
 
       if (selectedConversationId) {
-        const exists = nextConversations.some(
-          (conversation) => conversation.id === selectedConversationId
-        )
+        const exists =
+          nextConversations.some(
+            (conversation) =>
+              conversation.id ===
+              selectedConversationId
+          )
 
         if (!exists) {
           setSelectedConversationId('')
-          localStorage.removeItem('nexusConversationId')
+          localStorage.removeItem(
+            'nexusConversationId'
+          )
         }
       }
     } catch (error) {
-      console.error('Failed to load conversations:', error)
+      console.error(
+        'Failed to load conversations:',
+        error
+      )
     }
   }
 
-  const loadConversationMessages = async (conversationId) => {
+  /*
+   * Load messages for selected conversation.
+   */
+  const loadConversationMessages = async (
+    conversationId
+  ) => {
     if (!conversationId) {
       setMessages([])
       return
     }
 
     try {
-      const response = await api.get(
-        `/conversations/${conversationId}/messages`
-      )
+      const response =
+        await api.get(
+          `/conversations/${conversationId}/messages`
+        )
 
-      const history = response?.data?.data || []
+      const history =
+        response?.data?.data || []
 
       setMessages(
         history.map((entry) => ({
@@ -123,19 +303,32 @@ function App() {
         }))
       )
     } catch (error) {
-      console.error('Failed to load messages:', error)
+      console.error(
+        'Failed to load messages:',
+        error
+      )
+
       setMessages([])
     }
   }
 
+  /*
+   * Load user data after authentication.
+   */
   useEffect(() => {
     if (!authenticated) return
 
     setUserName(getStoredUserName())
-    setAssistantName(getStoredAssistantName())
+    setAssistantName(
+      getStoredAssistantName()
+    )
+
     loadConversations()
   }, [authenticated])
 
+  /*
+   * Load selected conversation.
+   */
   useEffect(() => {
     if (!authenticated) return
 
@@ -144,10 +337,22 @@ function App() {
       return
     }
 
-    localStorage.setItem('nexusConversationId', selectedConversationId)
-    loadConversationMessages(selectedConversationId)
-  }, [authenticated, selectedConversationId])
+    localStorage.setItem(
+      'nexusConversationId',
+      selectedConversationId
+    )
 
+    loadConversationMessages(
+      selectedConversationId
+    )
+  }, [
+    authenticated,
+    selectedConversationId,
+  ])
+
+  /*
+   * Login.
+   */
   const handleLogin = (userData = null) => {
     const loggedInName =
       userData?.name ||
@@ -156,14 +361,24 @@ function App() {
 
     const loggedInAssistant =
       userData?.assistantName ||
-      localStorage.getItem('nexusAssistantName') ||
+      localStorage.getItem(
+        'nexusAssistantName'
+      ) ||
       'JARVIS'
 
-    localStorage.setItem('nexusName', loggedInName)
-    localStorage.setItem('nexusAssistantName', loggedInAssistant)
+    localStorage.setItem(
+      'nexusName',
+      loggedInName
+    )
 
-    // Do not reuse the previous account's active conversation.
-    localStorage.removeItem('nexusConversationId')
+    localStorage.setItem(
+      'nexusAssistantName',
+      loggedInAssistant
+    )
+
+    localStorage.removeItem(
+      'nexusConversationId'
+    )
 
     setUserName(loggedInName)
     setAssistantName(loggedInAssistant)
@@ -174,15 +389,23 @@ function App() {
     setAuthenticated(true)
   }
 
+  /*
+   * Logout.
+   */
   const handleLogout = () => {
     recognitionRef.current?.stop()
+    window.speechSynthesis?.cancel()
 
     localStorage.removeItem('nexusToken')
     localStorage.removeItem('nexusEmail')
     localStorage.removeItem('nexusName')
     localStorage.removeItem('nexusRole')
-    localStorage.removeItem('nexusAssistantName')
-    localStorage.removeItem('nexusConversationId')
+    localStorage.removeItem(
+      'nexusAssistantName'
+    )
+    localStorage.removeItem(
+      'nexusConversationId'
+    )
 
     setAuthenticated(false)
     setSelectedConversationId('')
@@ -192,71 +415,131 @@ function App() {
     setAssistantName('JARVIS')
     setVoiceError('')
     setMessage('')
+    setIsListening(false)
+    setIsSpeaking(false)
     setActiveView('command')
   }
 
+  /*
+   * Ensure a conversation exists.
+   */
   const ensureConversation = async () => {
     const activeConversationId =
-      selectedConversationId || localStorage.getItem('nexusConversationId')
+      selectedConversationId ||
+      localStorage.getItem(
+        'nexusConversationId'
+      )
 
     if (activeConversationId) {
       return activeConversationId
     }
 
-    const response = await api.post('/conversations', {
-      title: `Conversation - ${new Date().toLocaleDateString()}`,
-    })
+    const response =
+      await api.post('/conversations', {
+        title: `Conversation - ${new Date().toLocaleDateString()}`,
+      })
 
-    const nextConversationId = response?.data?.data?.id
+    const nextConversationId =
+      response?.data?.data?.id
 
     if (!nextConversationId) {
-      throw new Error('Conversation ID missing from response.')
+      throw new Error(
+        'Conversation ID missing from response.'
+      )
     }
 
-    setSelectedConversationId(nextConversationId)
-    localStorage.setItem('nexusConversationId', nextConversationId)
+    setSelectedConversationId(
+      nextConversationId
+    )
+
+    localStorage.setItem(
+      'nexusConversationId',
+      nextConversationId
+    )
 
     await loadConversations()
 
     return nextConversationId
   }
 
+  /*
+   * Create new conversation.
+   */
   const handleNewConversation = async () => {
+    handleStopSpeaking()
+
     setMessages([])
     setSelectedConversationId('')
-    localStorage.removeItem('nexusConversationId')
+
+    localStorage.removeItem(
+      'nexusConversationId'
+    )
 
     try {
-      const response = await api.post('/conversations', {
-        title: 'New Conversation',
-      })
+      const response =
+        await api.post('/conversations', {
+          title: 'New Conversation',
+        })
 
-      const nextConversationId = response?.data?.data?.id
+      const nextConversationId =
+        response?.data?.data?.id
 
       if (!nextConversationId) return
 
-      setSelectedConversationId(nextConversationId)
-      localStorage.setItem('nexusConversationId', nextConversationId)
+      setSelectedConversationId(
+        nextConversationId
+      )
+
+      localStorage.setItem(
+        'nexusConversationId',
+        nextConversationId
+      )
+
       setActiveView('conversations')
       setIsMobileMenuOpen(false)
 
       await loadConversations()
     } catch (error) {
-      console.error('Failed to create conversation:', error)
+      console.error(
+        'Failed to create conversation:',
+        error
+      )
     }
   }
 
-  const handleSelectConversation = async (conversation) => {
-    setSelectedConversationId(conversation.id)
-    localStorage.setItem('nexusConversationId', conversation.id)
+  /*
+   * Select conversation.
+   */
+  const handleSelectConversation = async (
+    conversation
+  ) => {
+    handleStopSpeaking()
+
+    setSelectedConversationId(
+      conversation.id
+    )
+
+    localStorage.setItem(
+      'nexusConversationId',
+      conversation.id
+    )
+
     setActiveView('conversations')
     setIsMobileMenuOpen(false)
 
-    await loadConversationMessages(conversation.id)
+    await loadConversationMessages(
+      conversation.id
+    )
   }
 
-  const handleSend = async (messageToSend = message) => {
-    const trimmedMessage = messageToSend.trim()
+  /*
+   * Send chat message.
+   */
+  const handleSend = async (
+    messageToSend = message
+  ) => {
+    const trimmedMessage =
+      messageToSend.trim()
 
     if (!trimmedMessage || isSending) return
 
@@ -265,19 +548,30 @@ function App() {
       return
     }
 
+    if (isSpeaking) {
+      handleStopSpeaking()
+    }
+
     try {
       setIsSending(true)
       setVoiceError('')
 
-      const conversationId = await ensureConversation()
+      const conversationId =
+        await ensureConversation()
 
-      const response = await api.post('/chat', {
-        conversationId,
-        message: trimmedMessage,
-        assistantName,
-      })
+      const response =
+        await api.post('/chat', {
+          conversationId,
+          message: trimmedMessage,
+          assistantName,
+        })
 
-      const chatData = response?.data?.data
+      const chatData =
+        response?.data?.data
+
+      const aiResponse =
+        chatData?.aiResponse ||
+        'No response received.'
 
       setMessages((previous) => [
         ...previous,
@@ -289,15 +583,20 @@ function App() {
         {
           id: `${conversationId}-assistant-${Date.now() + 1}`,
           role: 'ASSISTANT',
-          content: chatData?.aiResponse || 'No response received.',
+          content: aiResponse,
         },
       ])
 
       setMessage('')
 
+      speak(aiResponse)
+
       await loadConversations()
     } catch (error) {
-      console.error('Chat request failed:', error)
+      console.error(
+        'Chat request failed:',
+        error
+      )
 
       setVoiceError(
         error.response?.data?.message ||
@@ -308,38 +607,57 @@ function App() {
     }
   }
 
+  /*
+   * Voice input.
+   */
   const handleVoice = () => {
+    if (isSpeaking) {
+      setVoiceError(
+        'JARVIS is speaking. Stop the response before giving another voice command.'
+      )
+
+      return
+    }
+
     if (isListening) {
       recognitionRef.current?.stop()
       return
     }
 
     const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition
 
     if (!SpeechRecognition) {
       setVoiceError(
         'Voice input is not supported by this browser. Please use Chrome or Edge.'
       )
+
       return
     }
 
     setVoiceError('')
 
-    const recognition = new SpeechRecognition()
+    const recognition =
+      new SpeechRecognition()
 
     recognition.lang = 'en-US'
     recognition.continuous = false
     recognition.interimResults = false
 
-    recognition.onstart = () => setIsListening(true)
+    recognition.onstart = () => {
+      setIsListening(true)
+      setVoiceError('')
+    }
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript.trim()
+      const transcript =
+        event.results[0][0].transcript.trim()
 
       if (!transcript) return
 
       setMessage(transcript)
+
       void handleSend(transcript)
     }
 
@@ -347,32 +665,73 @@ function App() {
       const errors = {
         'not-allowed':
           'Microphone permission was denied. Allow microphone access and try again.',
-        'no-speech': 'No speech was detected. Please try again.',
-        'audio-capture': 'No microphone was found or is unavailable.',
+        'no-speech':
+          'No speech was detected. Please try again.',
+        'audio-capture':
+          'No microphone was found or is unavailable.',
+        aborted:
+          'Voice input was stopped.',
       }
 
       setVoiceError(
         errors[event.error] ||
           'Voice input could not be completed. Please try again.'
       )
+
+      setIsListening(false)
     }
 
-    recognition.onend = () => setIsListening(false)
+    recognition.onend = () => {
+      setIsListening(false)
+    }
 
     recognitionRef.current = recognition
-    recognition.start()
+
+    try {
+      recognition.start()
+    } catch (error) {
+      console.error(
+        'Voice recognition could not start:',
+        error
+      )
+
+      setIsListening(false)
+
+      setVoiceError(
+        'Voice input could not be started. Please try again.'
+      )
+    }
   }
 
+  /*
+   * Shared command composer.
+   */
   const renderComposer = () => (
     <div className="command-composer-wrap">
-      {voiceError && <p className="voice-error">{voiceError}</p>}
+      {voiceError && (
+        <p className="voice-error">
+          {voiceError}
+        </p>
+      )}
 
       <div className="command-composer">
         <button
-          className={`mic-control ${isListening ? 'active' : ''}`}
+          className={`mic-control ${
+            isListening ? 'active' : ''
+          } ${
+            isSpeaking ? 'disabled' : ''
+          }`}
           onClick={handleVoice}
-          disabled={isSending}
-          title={isListening ? 'Stop listening' : 'Voice command'}
+          disabled={
+            isSending || isSpeaking
+          }
+          title={
+            isSpeaking
+              ? 'JARVIS is speaking'
+              : isListening
+                ? 'Stop listening'
+                : 'Voice command'
+          }
         >
           <Mic size={22} />
         </button>
@@ -380,12 +739,17 @@ function App() {
         <input
           type="text"
           placeholder={
-            isListening
-              ? 'Listening for your command...'
-              : 'Type your command...'
+            isSpeaking
+              ? `${assistantName} is speaking...`
+              : isListening
+                ? 'Listening for your command...'
+                : 'Type your command...'
           }
           value={message}
-          onChange={(event) => setMessage(event.target.value)}
+          onChange={(event) =>
+            setMessage(event.target.value)
+          }
+          disabled={isSpeaking}
           onKeyDown={(event) => {
             if (event.key === 'Enter') {
               event.preventDefault()
@@ -394,18 +758,38 @@ function App() {
           }}
         />
 
-        <button
-          className="send-control"
-          onClick={() => handleSend()}
-          disabled={isSending || !message.trim()}
-          title={isSending ? 'Sending...' : 'Send command'}
-        >
-          <Send size={21} />
-        </button>
+        {isSpeaking ? (
+          <button
+            className="send-control"
+            onClick={handleStopSpeaking}
+            title="Stop JARVIS"
+          >
+            <Square size={18} />
+          </button>
+        ) : (
+          <button
+            className="send-control"
+            onClick={() => handleSend()}
+            disabled={
+              isSending ||
+              !message.trim()
+            }
+            title={
+              isSending
+                ? 'Sending...'
+                : 'Send command'
+            }
+          >
+            <Send size={21} />
+          </button>
+        )}
       </div>
     </div>
   )
 
+  /*
+   * Login screen.
+   */
   if (!authenticated) {
     return <Login onLogin={handleLogin} />
   }
@@ -416,7 +800,12 @@ function App() {
       <div className="ambient-glow glow-one" />
       <div className="ambient-glow glow-two" />
 
-      <aside className={`nexus-sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
+      {/* SIDEBAR */}
+      <aside
+        className={`nexus-sidebar ${
+          isMobileMenuOpen ? 'open' : ''
+        }`}
+      >
         <div className="sidebar-brand">
           <div className="brand-mark">
             <Bot size={25} />
@@ -429,7 +818,9 @@ function App() {
 
           <button
             className="mobile-close"
-            onClick={() => setIsMobileMenuOpen(false)}
+            onClick={() =>
+              setIsMobileMenuOpen(false)
+            }
           >
             <X size={21} />
           </button>
@@ -443,11 +834,18 @@ function App() {
           New Conversation
         </button>
 
-        <div className="sidebar-label">WORKSPACE</div>
+        <div className="sidebar-label">
+          WORKSPACE
+        </div>
 
         <nav className="sidebar-navigation">
+          {/* COMMAND CENTER */}
           <button
-            className={activeView === 'command' ? 'active' : ''}
+            className={
+              activeView === 'command'
+                ? 'active'
+                : ''
+            }
             onClick={() => {
               setActiveView('command')
               setIsMobileMenuOpen(false)
@@ -457,8 +855,13 @@ function App() {
             Command Center
           </button>
 
+          {/* CONVERSATIONS */}
           <button
-            className={activeView === 'conversations' ? 'active' : ''}
+            className={
+              activeView === 'conversations'
+                ? 'active'
+                : ''
+            }
             onClick={() => {
               setActiveView('conversations')
               setIsMobileMenuOpen(false)
@@ -468,34 +871,68 @@ function App() {
             Conversations
           </button>
 
-          <button className="future-button" title="Coming soon">
+          {/* FILES */}
+          <button
+            className={
+              activeView === 'files'
+                ? 'active'
+                : ''
+            }
+            onClick={() => {
+              setActiveView('files')
+              setIsMobileMenuOpen(false)
+            }}
+          >
+            <FileText size={18} />
+            Files
+          </button>
+
+          {/* AUTOMATION */}
+          <button
+            className="future-button"
+            title="Coming soon"
+          >
             <Zap size={18} />
             Automation
           </button>
         </nav>
 
+        {/* RECENT CONVERSATIONS */}
         <div className="sidebar-conversations">
           <div className="sidebar-label">
             RECENT CONVERSATIONS
 
-            <button onClick={() => setActiveView('conversations')}>
+            <button
+              onClick={() =>
+                setActiveView(
+                  'conversations'
+                )
+              }
+            >
               <ChevronRight size={16} />
             </button>
           </div>
 
-          {conversations.slice(0, 4).map((conversation) => (
-            <button
-              className="recent-conversation"
-              key={conversation.id}
-              onClick={() => handleSelectConversation(conversation)}
-            >
-              <MessageSquare size={15} />
+          {conversations
+            .slice(0, 4)
+            .map((conversation) => (
+              <button
+                className="recent-conversation"
+                key={conversation.id}
+                onClick={() =>
+                  handleSelectConversation(
+                    conversation
+                  )
+                }
+              >
+                <MessageSquare size={15} />
 
-              <span>
-                {conversation.title || 'Conversation'}
-              </span>
-            </button>
-          ))}
+                <span>
+                  {conversation.title ||
+                    'Conversation'}
+                </span>
+              </button>
+            ))}
 
           {conversations.length === 0 && (
             <p className="no-recent-conversations">
@@ -504,6 +941,7 @@ function App() {
           )}
         </div>
 
+        {/* CORE STATUS */}
         <div className="sidebar-core-status">
           <div className="online-status">
             <span />
@@ -519,39 +957,51 @@ function App() {
 
           <div className="core-mini-stats">
             <span>
-              AI ENGINE <strong>READY</strong>
+              AI ENGINE{' '}
+              <strong>READY</strong>
             </span>
 
             <span>
-              SECURITY <strong>ACTIVE</strong>
+              SECURITY{' '}
+              <strong>ACTIVE</strong>
             </span>
           </div>
         </div>
 
+        {/* FOOTER CONTROLS */}
         <div className="sidebar-footer-controls">
           <button title="Settings">
             <Settings size={18} />
           </button>
 
-          <button onClick={handleLogout} title="Log out">
+          <button
+            onClick={handleLogout}
+            title="Log out"
+          >
             <Power size={18} />
           </button>
         </div>
       </aside>
 
+      {/* MOBILE OVERLAY */}
       {isMobileMenuOpen && (
         <button
           className="sidebar-overlay"
-          onClick={() => setIsMobileMenuOpen(false)}
+          onClick={() =>
+            setIsMobileMenuOpen(false)
+          }
           aria-label="Close menu"
         />
       )}
 
       <main className="nexus-main">
+        {/* HEADER */}
         <header className="nexus-header">
           <button
             className="mobile-menu-button"
-            onClick={() => setIsMobileMenuOpen(true)}
+            onClick={() =>
+              setIsMobileMenuOpen(true)
+            }
           >
             <Menu size={23} />
           </button>
@@ -561,15 +1011,21 @@ function App() {
 
             {activeView === 'command'
               ? 'COMMAND CENTER'
-              : 'CONVERSATIONS'}
+              : activeView ===
+                  'conversations'
+                ? 'CONVERSATIONS'
+                : 'FILES'}
           </div>
 
           <div className="header-status">
             <span className="live-time">
-              {new Date().toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {new Date().toLocaleTimeString(
+                [],
+                {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }
+              )}
             </span>
 
             <Radio size={18} />
@@ -577,6 +1033,9 @@ function App() {
           </div>
         </header>
 
+        {/* =====================================================
+            COMMAND CENTER
+        ===================================================== */}
         {activeView === 'command' ? (
           <section className="command-view">
             <div className="command-topline">
@@ -586,11 +1045,13 @@ function App() {
                 </span>
 
                 <h1>
-                  {greeting}, <span>{userName}.</span>
+                  {greeting},{' '}
+                  <span>{userName}.</span>
                 </h1>
 
                 <p>
-                  {assistantName} is ready for your next command.
+                  {assistantName} is ready
+                  for your next command.
                 </p>
               </div>
 
@@ -603,7 +1064,11 @@ function App() {
             <div className="command-dashboard">
               <div className="left-metric-stack">
                 {systemStats.map(
-                  ({ label, value, icon: Icon }) => (
+                  ({
+                    label,
+                    value,
+                    icon: Icon,
+                  }) => (
                     <article
                       className="metric-card"
                       key={label}
@@ -614,7 +1079,9 @@ function App() {
 
                       <div>
                         <small>{label}</small>
-                        <strong>{value}</strong>
+                        <strong>
+                          {value}
+                        </strong>
                       </div>
                     </article>
                   )
@@ -623,7 +1090,10 @@ function App() {
 
               <div
                 className={`nexus-core-stage ${
-                  isListening ? 'listening' : ''
+                  isListening ||
+                  isSpeaking
+                    ? 'listening'
+                    : ''
                 }`}
               >
                 <div className="core-data-line left-line" />
@@ -641,7 +1111,9 @@ function App() {
                   <div className="core-center-light" />
 
                   <strong>
-                    {assistantName.charAt(0).toUpperCase()}
+                    {assistantName
+                      .charAt(0)
+                      .toUpperCase()}
                   </strong>
 
                   <span>
@@ -652,9 +1124,11 @@ function App() {
                 <div className="core-caption">
                   <span className="core-caption-dot" />
 
-                  {isListening
-                    ? 'VOICE LINK ACTIVE'
-                    : `${assistantName.toUpperCase()} CORE STANDBY`}
+                  {isSpeaking
+                    ? 'JARVIS SPEAKING'
+                    : isListening
+                      ? 'VOICE LINK ACTIVE'
+                      : `${assistantName.toUpperCase()} CORE STANDBY`}
                 </div>
               </div>
 
@@ -667,7 +1141,9 @@ function App() {
 
                   <strong>128</strong>
 
-                  <span>AI modules available</span>
+                  <span>
+                    AI modules available
+                  </span>
                 </article>
 
                 <article className="activity-card">
@@ -676,9 +1152,14 @@ function App() {
                     DATA FLOW
                   </div>
 
-                  <strong>2.7 TB/s</strong>
+                  <strong>
+                    2.7 TB/s
+                  </strong>
 
-                  <span>Secure connection active</span>
+                  <span>
+                    Secure connection
+                    active
+                  </span>
                 </article>
 
                 <article className="activity-card">
@@ -687,37 +1168,65 @@ function App() {
                     SECURITY
                   </div>
 
-                  <strong>PROTECTED</strong>
+                  <strong>
+                    PROTECTED
+                  </strong>
 
-                  <span>All systems secure</span>
+                  <span>
+                    All systems secure
+                  </span>
                 </article>
               </div>
             </div>
 
+            {/* VOICE PANEL */}
             <div
               className={`voice-link-panel ${
-                isListening ? 'active' : ''
+                isListening ||
+                isSpeaking
+                  ? 'active'
+                  : ''
+              } ${
+                isSpeaking
+                  ? 'speaking'
+                  : ''
               }`}
             >
               <div className="voice-link-icon">
-                <Mic size={20} />
+                {isSpeaking ? (
+                  <Volume2 size={20} />
+                ) : (
+                  <Mic size={20} />
+                )}
               </div>
 
               <div className="voice-link-content">
                 <span>
-                  {isListening
-                    ? 'VOICE LINK ACTIVE'
-                    : 'VOICE COMMAND LINK'}
+                  {isSpeaking
+                    ? 'JARVIS SPEAKING'
+                    : isListening
+                      ? 'VOICE LINK ACTIVE'
+                      : 'VOICE COMMAND LINK'}
                 </span>
 
                 <div className="voice-wave">
-                  {Array.from({ length: 28 }).map(
+                  {Array.from({
+                    length: 28,
+                  }).map(
                     (_, index) => (
                       <i
                         key={index}
                         style={{
-                          height: `${7 + ((index * 11) % 15)}px`,
-                          animationDelay: `${index * 0.04}s`,
+                          height: `${
+                            7 +
+                            ((index *
+                              11) %
+                              15)
+                          }px`,
+                          animationDelay: `${
+                            index *
+                            0.04
+                          }s`,
                         }}
                       />
                     )
@@ -726,39 +1235,65 @@ function App() {
               </div>
 
               <small>
-                {isListening
-                  ? 'LISTENING...'
-                  : 'VOICE READY'}
+                {isSpeaking
+                  ? 'SPEAKING...'
+                  : isListening
+                    ? 'LISTENING...'
+                    : 'VOICE READY'}
               </small>
             </div>
 
+            {isSpeaking && (
+              <button
+                className="voice-stop-button"
+                onClick={
+                  handleStopSpeaking
+                }
+                title="Stop JARVIS"
+              >
+                <Square size={16} />
+                STOP JARVIS
+              </button>
+            )}
+
+            {/* MESSAGE PREVIEW */}
             {messages.length > 0 && (
               <div className="command-message-preview">
-                {messages.slice(-2).map((entry) => (
-                  <div
-                    className={`preview-message ${entry.role.toLowerCase()}`}
-                    key={entry.id}
-                  >
-                    <span>
-                      {entry.role === 'USER'
-                        ? 'YOU'
-                        : assistantName.toUpperCase()}
-                    </span>
+                {messages
+                  .slice(-2)
+                  .map((entry) => (
+                    <div
+                      className={`preview-message ${entry.role.toLowerCase()}`}
+                      key={entry.id}
+                    >
+                      <span>
+                        {entry.role ===
+                        'USER'
+                          ? 'YOU'
+                          : assistantName.toUpperCase()}
+                      </span>
 
-                    <p>{entry.content}</p>
-                  </div>
-                ))}
+                      <p>
+                        {entry.content}
+                      </p>
+                    </div>
+                  ))}
               </div>
             )}
 
             {renderComposer()}
 
+            {/* QUICK COMMANDS */}
             <div className="command-suggestions">
-              <span>QUICK COMMANDS</span>
+              <span>
+                QUICK COMMANDS
+              </span>
 
               <button
                 onClick={() =>
-                  setMessage('What can you do?')
+                  setMessage(
+                    'What can you do?'
+                  )
                 }
               >
                 <Sparkles size={14} />
@@ -767,7 +1302,9 @@ function App() {
 
               <button
                 onClick={() =>
-                  setMessage('Show my conversations')
+                  setMessage(
+                    'Show my conversations'
+                  )
                 }
               >
                 <MessageSquare size={14} />
@@ -776,7 +1313,9 @@ function App() {
 
               <button
                 onClick={() =>
-                  setMessage('System status')
+                  setMessage(
+                    'System status'
+                  )
                 }
               >
                 <Activity size={14} />
@@ -784,7 +1323,13 @@ function App() {
               </button>
             </div>
           </section>
-        ) : (
+
+        ) : activeView === 'conversations' ? (
+
+          /* =====================================================
+             CONVERSATIONS
+          ===================================================== */
+
           <section className="conversations-view">
             <div className="conversation-list-panel">
               <div className="conversation-panel-header">
@@ -793,11 +1338,15 @@ function App() {
                     NEXUS ARCHIVE
                   </span>
 
-                  <h2>Conversations</h2>
+                  <h2>
+                    Conversations
+                  </h2>
                 </div>
 
                 <button
-                  onClick={handleNewConversation}
+                  onClick={
+                    handleNewConversation
+                  }
                   title="New conversation"
                 >
                   <Plus size={19} />
@@ -805,47 +1354,62 @@ function App() {
               </div>
 
               <div className="conversation-list">
-                {conversations.length === 0 ? (
+                {conversations.length ===
+                0 ? (
                   <div className="empty-conversations">
-                    <MessageSquare size={28} />
-                    <p>No conversations yet.</p>
+                    <MessageSquare
+                      size={28}
+                    />
+
+                    <p>
+                      No conversations
+                      yet.
+                    </p>
                   </div>
                 ) : (
-                  conversations.map((conversation) => (
-                    <button
-                      key={conversation.id}
-                      className={`conversation-row ${
-                        selectedConversationId ===
-                        conversation.id
-                          ? 'selected'
-                          : ''
-                      }`}
-                      onClick={() =>
-                        handleSelectConversation(
-                          conversation
-                        )
-                      }
-                    >
-                      <MessageSquare size={17} />
+                  conversations.map(
+                    (conversation) => (
+                      <button
+                        key={
+                          conversation.id
+                        }
+                        className={`conversation-row ${
+                          selectedConversationId ===
+                          conversation.id
+                            ? 'selected'
+                            : ''
+                        }`}
+                        onClick={() =>
+                          handleSelectConversation(
+                            conversation
+                          )
+                        }
+                      >
+                        <MessageSquare
+                          size={17}
+                        />
 
-                      <span>
-                        <strong>
-                          {conversation.title ||
-                            'Conversation'}
-                        </strong>
+                        <span>
+                          <strong>
+                            {conversation.title ||
+                              'Conversation'}
+                          </strong>
 
-                        <small>
-                          {conversation.createdAt
-                            ? new Date(
-                                conversation.createdAt
-                              ).toLocaleDateString()
-                            : 'Recent'}
-                        </small>
-                      </span>
+                          <small>
+                            {conversation.createdAt
+                              ? new Date(
+                                  conversation.createdAt
+                                ).toLocaleDateString()
+                              : 'Recent'}
+                          </small>
+                        </span>
 
-                      <ChevronRight size={16} />
-                    </button>
-                  ))
+                        <ChevronRight
+                          size={16}
+                        />
+                      </button>
+                    )
+                  )
                 )}
               </div>
             </div>
@@ -876,42 +1440,54 @@ function App() {
                     <Bot size={38} />
 
                     <h3>
-                      No conversation selected
+                      No conversation
+                      selected
                     </h3>
 
                     <p>
-                      Select a saved conversation or
+                      Select a saved
+                      conversation or
                       create a new one.
                     </p>
                   </div>
-                ) : messages.length === 0 ? (
+                ) : messages.length ===
+                  0 ? (
                   <div className="empty-thread">
-                    <Sparkles size={38} />
+                    <Sparkles
+                      size={38}
+                    />
 
                     <h3>
-                      Start the conversation
+                      Start the
+                      conversation
                     </h3>
 
                     <p>
-                      Send a command to begin talking
-                      with {assistantName}.
+                      Send a command to
+                      begin talking with{' '}
+                      {assistantName}.
                     </p>
                   </div>
                 ) : (
-                  messages.map((entry) => (
-                    <article
-                      key={entry.id}
-                      className={`thread-message ${entry.role.toLowerCase()}`}
-                    >
-                      <div className="thread-message-label">
-                        {entry.role === 'USER'
-                          ? 'YOU'
-                          : assistantName.toUpperCase()}
-                      </div>
+                  messages.map(
+                    (entry) => (
+                      <article
+                        key={entry.id}
+                        className={`thread-message ${entry.role.toLowerCase()}`}
+                      >
+                        <div className="thread-message-label">
+                          {entry.role ===
+                          'USER'
+                            ? 'YOU'
+                            : assistantName.toUpperCase()}
+                        </div>
 
-                      <p>{entry.content}</p>
-                    </article>
-                  ))
+                        <p>
+                          {entry.content}
+                        </p>
+                      </article>
+                    )
+                  )
                 )}
               </div>
 
@@ -920,11 +1496,25 @@ function App() {
               </div>
             </div>
           </section>
+
+        ) : (
+
+          /* =====================================================
+             FILES
+          ===================================================== */
+
+          <section className="files-view">
+            <Files
+            assistantName={assistantName}
+    conversationId={selectedConversationId} />
+          </section>
         )}
 
         <footer className="nexus-footer">
           <span>NEXUS AI</span>
-          <span>CORE ENGINE CONNECTED</span>
+          <span>
+            CORE ENGINE CONNECTED
+          </span>
           <span>v1.0.0</span>
         </footer>
       </main>

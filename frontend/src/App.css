@@ -497,10 +497,12 @@ button {
 }
 
 .nexus-core-stage {
-  min-height: 345px;
+  min-height: 420px;
   position: relative;
   display: grid;
   place-items: center;
+  overflow: hidden;
+  margin-bottom: 20px;
 }
 
 .orbit {
@@ -1448,24 +1450,31 @@ button {
   }
 
   .orbit-large {
-    width: 285px;
-  }
+  width: 245px;
+}
 
-  .orbit-medium {
-    width: 220px;
-  }
+.orbit-medium {
+  width: 190px;
+}
 
-  .orbit-small {
-    width: 155px;
-  }
+.orbit-small {
+  width: 135px;
+}
 
-  .nexus-core {
-    width: 108px;
-    height: 108px;
-  }
+.nexus-core {
+  width: 94px;
+  height: 94px;
+}
+.nexus-core {
+  width: 102px;
+  height: 102px;
+}
 
   .voice-link-panel {
-    padding: 10px;
+  position: relative;
+  top: auto;
+  margin-top: 18px;
+  margin-bottom: 16px;
   }
 
   .voice-link-panel small {
@@ -1517,4 +1526,225 @@ button {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+/* =========================================
+   JARVIS STOP BUTTON
+   ========================================= */
+
+.voice-stop-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  min-height: 38px;
+  padding: 0 15px;
+
+  margin-top: 12px;
+  margin-left: 0;
+
+  border: 1px solid rgba(255, 80, 80, 0.35);
+  border-radius: 10px;
+
+  background: rgba(255, 60, 60, 0.08);
+  color: #ff8b8b;
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.voice-stop-button:hover {
+  background: rgba(255, 60, 60, 0.16);
+  border-color: rgba(255, 80, 80, 0.65);
+  color: #ffb0b0;
+  box-shadow: 0 0 18px rgba(255, 60, 60, 0.12);
+  transform: translateY(-1px);
+}
+
+.voice-stop-button:active {
+  transform: translateY(0);
+}
+
+.voice-stop-button svg {
+  flex-shrink: 0;
+}
+/* =========================
+   FILES
+========================= */
+
+.files-view {
+  padding: 32px;
+  min-height: calc(100vh - 80px);
+}
+
+.files-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.files-header h1 {
+  margin: 8px 0;
+  font-size: 32px;
+}
+
+.files-header p {
+  margin: 0;
+  opacity: 0.65;
+}
+
+.files-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.files-upload-button,
+.files-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  padding: 11px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.files-upload-button:hover,
+.files-refresh-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.files-upload-button:disabled,
+.files-refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.files-panel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.files-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.file-row:last-child {
+  border-bottom: none;
+}
+
+.file-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-info strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-info small {
+  display: block;
+  margin-top: 5px;
+  opacity: 0.55;
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.file-actions button {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.file-actions button:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.files-empty-state {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  opacity: 0.7;
+}
+
+.files-empty-state h3 {
+  margin: 5px 0;
+}
+
+.files-empty-state p {
+  margin: 0 0 10px;
+}
+
+.files-empty-state button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.files-error {
+  margin-bottom: 18px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(255, 70, 70, 0.1);
+  border: 1px solid rgba(255, 70, 70, 0.25);
 }
