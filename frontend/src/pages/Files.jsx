@@ -1,5 +1,8 @@
 import { useRef, useState } from 'react'
 import mammoth from 'mammoth'
+import * as XLSX from 'xlsx'
+import * as pdfjsLib from 'pdfjs-dist'
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import {
   File,
   FileText,
@@ -16,8 +19,11 @@ import {
 import api from '../api/axios'
 import './Files.css'
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker
+
 const getFileIcon = (file) => {
   const type = file.type || ''
+  const lowerName = file.name?.toLowerCase() || ''
 
   if (type.startsWith('image/')) {
     return <Image size={22} />
@@ -37,7 +43,11 @@ const getFileIcon = (file) => {
     type.includes('document') ||
     type.includes('word') ||
     type.includes('sheet') ||
-    file.name?.toLowerCase().endsWith('.docx')
+    type.includes('excel') ||
+    lowerName.endsWith('.docx') ||
+    lowerName.endsWith('.xlsx') ||
+    lowerName.endsWith('.xls') ||
+    lowerName.endsWith('.csv')
   ) {
     return <FileText size={22} />
   }
@@ -45,17 +55,109 @@ const getFileIcon = (file) => {
   return <File size={22} />
 }
 
+/*
+ * Extract text from PDF files.
+ */
+const extractPdfText = async (file) => {
+  const arrayBuffer = await file.arrayBuffer()
+
+  const pdf = await pdfjsLib.getDocument({
+    data: arrayBuffer,
+  }).promise
+
+  let extractedText = ''
+
+  for (
+    let pageNumber = 1;
+    pageNumber <= pdf.numPages;
+    pageNumber++
+  ) {
+    const page = await pdf.getPage(pageNumber)
+
+    const textContent =
+      await page.getTextContent()
+
+    const pageText = textContent.items
+      .map((item) => item.str || '')
+      .join(' ')
+
+    extractedText +=
+      `\n\n--- Page ${pageNumber} ---\n${pageText}`
+  }
+
+  return extractedText.trim()
+}
+
+/*
+ * Extract text from Excel / CSV files.
+ *
+ * Supported:
+ * - XLSX
+ * - XLS
+ * - CSV
+ *
+ * Every worksheet is converted into
+ * readable row/column text.
+ */
+const extractSpreadsheetText = async (file) => {
+  const arrayBuffer = await file.arrayBuffer()
+
+  const workbook = XLSX.read(arrayBuffer, {
+    type: 'array',
+  })
+
+  let extractedText = ''
+
+  workbook.SheetNames.forEach((sheetName) => {
+    const worksheet = workbook.Sheets[sheetName]
+
+    const rows = XLSX.utils.sheet_to_json(
+      worksheet,
+      {
+        header: 1,
+        defval: '',
+      }
+    )
+
+    extractedText +=
+      `\n\n--- SHEET: ${sheetName} ---\n`
+
+    rows.forEach((row, rowIndex) => {
+      const rowText = row
+        .map(
+          (cell, columnIndex) =>
+            `Column ${columnIndex + 1}: ${cell}`
+        )
+        .join(' | ')
+
+      extractedText +=
+        `Row ${rowIndex + 1}: ${rowText}\n`
+    })
+
+    extractedText +=
+      `--- END SHEET: ${sheetName} ---\n`
+  })
+
+  return extractedText.trim()
+}
+
 const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes'
 
-  const units = ['Bytes', 'KB', 'MB', 'GB']
+  const units = [
+    'Bytes',
+    'KB',
+    'MB',
+    'GB',
+  ]
 
   const index = Math.floor(
     Math.log(bytes) / Math.log(1024)
   )
 
   return `${(
-    bytes / Math.pow(1024, index)
+    bytes /
+    Math.pow(1024, index)
   ).toFixed(2)} ${units[index]}`
 }
 
@@ -80,11 +182,14 @@ function Files({
   /*
    * Read selected files.
    *
-   * Currently supported:
-   * - DOCX -> text extraction using Mammoth
-   * - TXT  -> direct text reading
+   * Supported:
+   * - DOCX       -> Mammoth
+   * - PDF        -> PDF.js
+   * - TXT        -> browser text reader
+   * - XLSX/XLS   -> SheetJS
+   * - CSV        -> SheetJS
    *
-   * Other file types are selected and displayed,
+   * Other files are selected and displayed,
    * but their contents are not extracted yet.
    */
   const handleFilesSelected = async (event) => {
@@ -129,6 +234,19 @@ function Files({
         }
 
         /*
+         * PDF READING
+         */
+        else if (lowerName.endsWith('.pdf')) {
+          extractedText =
+            await extractPdfText(file)
+
+          extractionStatus =
+            extractedText
+              ? 'READ'
+              : 'EMPTY'
+        }
+
+        /*
          * TXT READING
          */
         else if (
@@ -148,10 +266,28 @@ function Files({
         }
 
         /*
+         * EXCEL / CSV READING
+         */
+        else if (
+          lowerName.endsWith('.xlsx') ||
+          lowerName.endsWith('.xls') ||
+          lowerName.endsWith('.csv')
+        ) {
+          extractedText =
+            await extractSpreadsheetText(file)
+
+          extractionStatus =
+            extractedText
+              ? 'READ'
+              : 'EMPTY'
+        }
+
+        /*
          * Other file types
          */
         else {
-          extractionStatus = 'NOT_SUPPORTED'
+          extractionStatus =
+            'NOT_SUPPORTED'
         }
       } catch (fileError) {
         console.error(
@@ -189,12 +325,8 @@ function Files({
   }
 
   /*
-   * Ask the user's preferred AI about the
-   * selected files.
-   *
-   * IMPORTANT:
-   * The actual extracted DOCX/TXT content is
-   * included in the message sent to the backend.
+   * Ask the user's preferred AI about
+   * the selected files.
    */
   const handleAskAI = async (
     messageToSend = aiMessage
@@ -251,41 +383,54 @@ function Files({
       /*
        * Build the actual file context.
        *
-       * This sends:
+       * The AI receives:
        * - file name
-       * - file size
-       * - extracted DOCX/TXT text
+       * - file type
+       * - extraction status
+       * - actual extracted document content
        *
-       * Therefore the AI can actually read
-       * the resume content.
+       * Limit each file to 20,000 characters
+       * for the current implementation.
        */
       const fileContext = files
-        .map(({ file, extractedText }) => {
-          if (extractedText) {
+        .map(
+          ({
+            file,
+            extractedText,
+            extractionStatus,
+          }) => {
+            const content = extractedText
+              ? extractedText.slice(0, 20000)
+              : 'No readable text was extracted from this file.'
+
             return `
 --- FILE: ${file.name} ---
-${extractedText}
+FILE TYPE: ${file.type || 'Unknown'}
+FILE SIZE: ${formatFileSize(file.size)}
+CONTENT STATUS: ${extractionStatus}
+
+FILE CONTENT:
+${content}
+
 --- END FILE ---
 `
           }
-
-          return `
---- FILE: ${file.name} ---
-File selected, but its content could not be extracted yet.
---- END FILE ---
-`
-        })
+        )
         .join('\n')
 
       /*
-       * Final message sent to backend.
+       * Final message sent to the backend.
        */
       const finalMessage = `
 User question:
 ${trimmedMessage}
 
 The user selected the following files.
-Use the file content below to answer the user's question.
+
+Use the actual file content below to answer
+the user's question. Do not claim that you
+cannot access the files if readable content
+has been provided.
 
 ${fileContext}
 `
@@ -456,7 +601,6 @@ ${fileContext}
                   (
                     {
                       file,
-                      extractedText,
                       extractionStatus,
                     },
                     index
@@ -495,7 +639,10 @@ ${fileContext}
                               : extractionStatus ===
                                   'EMPTY'
                                 ? 'EMPTY FILE'
-                                : 'READING ISSUE'}
+                                : extractionStatus ===
+                                    'ERROR'
+                                  ? 'READ FAILED'
+                                  : 'READING ISSUE'}
                         </small>
                       </div>
 
@@ -551,10 +698,10 @@ ${fileContext}
                 </h3>
 
                 <p>
-                  Select a DOCX resume or
-                  other supported file and
-                  ask {assistantName} what you
-                  want to know.
+                  Select a DOCX, PDF, TXT, XLSX,
+                  XLS, or CSV file and ask
+                  {assistantName} what you want
+                  to know.
                 </p>
               </div>
             ) : (
