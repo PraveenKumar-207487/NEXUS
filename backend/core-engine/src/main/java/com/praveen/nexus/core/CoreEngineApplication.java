@@ -2,12 +2,13 @@ package com.praveen.nexus.core;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 public class CoreEngineApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(CoreEngineApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(CoreEngineApplication.class, args);
+    }
 }
