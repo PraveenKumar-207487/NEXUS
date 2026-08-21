@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import Login from './pages/Login'
 import Files from './pages/Files'
 import api from './api/axios'
+import Automation from './pages/Automation'
 import {
   Activity,
   Bot,
@@ -37,9 +38,21 @@ const getGreeting = () => {
 }
 
 const systemStats = [
-  { label: 'AI Core', value: '98%', icon: BrainCircuit },
-  { label: 'Memory', value: '48%', icon: Database },
-  { label: 'Network', value: 'Online', icon: Network },
+  {
+    label: 'AI Core',
+    value: '98%',
+    icon: BrainCircuit,
+  },
+  {
+    label: 'Memory',
+    value: '48%',
+    icon: Database,
+  },
+  {
+    label: 'Network',
+    value: 'Online',
+    icon: Network,
+  },
 ]
 
 function App() {
@@ -82,8 +95,11 @@ function App() {
   )
 
   /*
-   * Load browser voices.
+   * =========================================
+   * LOAD BROWSER VOICES
+   * =========================================
    */
+
   useEffect(() => {
     if (!('speechSynthesis' in window)) return
 
@@ -107,8 +123,11 @@ function App() {
   }, [])
 
   /*
-   * JARVIS speech function.
+   * =========================================
+   * JARVIS SPEECH
+   * =========================================
    */
+
   const speak = (text) => {
     if (!text) return
 
@@ -116,6 +135,7 @@ function App() {
       setVoiceError(
         'Speech output is not supported by this browser. Please use Chrome or Edge.'
       )
+
       setIsSpeaking(false)
       return
     }
@@ -123,7 +143,8 @@ function App() {
     try {
       window.speechSynthesis.cancel()
 
-      const voices = window.speechSynthesis.getVoices()
+      const voices =
+        window.speechSynthesis.getVoices()
 
       const preferredVoice =
         voices.find(
@@ -212,8 +233,11 @@ function App() {
   }
 
   /*
-   * Stop JARVIS from speaking.
+   * =========================================
+   * STOP SPEAKING
+   * =========================================
    */
+
   const handleStopSpeaking = () => {
     if (!('speechSynthesis' in window)) return
 
@@ -223,6 +247,12 @@ function App() {
     setIsSpeaking(false)
   }
 
+  /*
+   * =========================================
+   * UPDATE GREETING
+   * =========================================
+   */
+
   useEffect(() => {
     const timer = window.setInterval(() => {
       setGreeting(getGreeting())
@@ -230,6 +260,12 @@ function App() {
 
     return () => window.clearInterval(timer)
   }, [])
+
+  /*
+   * =========================================
+   * CLEANUP
+   * =========================================
+   */
 
   useEffect(() => {
     return () => {
@@ -239,8 +275,11 @@ function App() {
   }, [])
 
   /*
-   * Load conversations.
+   * =========================================
+   * LOAD CONVERSATIONS
+   * =========================================
    */
+
   const loadConversations = async () => {
     try {
       const response =
@@ -261,6 +300,7 @@ function App() {
 
         if (!exists) {
           setSelectedConversationId('')
+
           localStorage.removeItem(
             'nexusConversationId'
           )
@@ -275,8 +315,11 @@ function App() {
   }
 
   /*
-   * Load messages for selected conversation.
+   * =========================================
+   * LOAD CONVERSATION MESSAGES
+   * =========================================
    */
+
   const loadConversationMessages = async (
     conversationId
   ) => {
@@ -313,12 +356,16 @@ function App() {
   }
 
   /*
-   * Load user data after authentication.
+   * =========================================
+   * LOAD USER DATA
+   * =========================================
    */
+
   useEffect(() => {
     if (!authenticated) return
 
     setUserName(getStoredUserName())
+
     setAssistantName(
       getStoredAssistantName()
     )
@@ -327,8 +374,11 @@ function App() {
   }, [authenticated])
 
   /*
-   * Load selected conversation.
+   * =========================================
+   * LOAD SELECTED CONVERSATION
+   * =========================================
    */
+
   useEffect(() => {
     if (!authenticated) return
 
@@ -351,8 +401,11 @@ function App() {
   ])
 
   /*
-   * Login.
+   * =========================================
+   * LOGIN
+   * =========================================
    */
+
   const handleLogin = (userData = null) => {
     const loggedInName =
       userData?.name ||
@@ -390,10 +443,14 @@ function App() {
   }
 
   /*
-   * Logout.
+   * =========================================
+   * LOGOUT
+   * =========================================
    */
+
   const handleLogout = () => {
     recognitionRef.current?.stop()
+
     window.speechSynthesis?.cancel()
 
     localStorage.removeItem('nexusToken')
@@ -421,8 +478,11 @@ function App() {
   }
 
   /*
-   * Ensure a conversation exists.
+   * =========================================
+   * ENSURE CONVERSATION
+   * =========================================
    */
+
   const ensureConversation = async () => {
     const activeConversationId =
       selectedConversationId ||
@@ -463,8 +523,11 @@ function App() {
   }
 
   /*
-   * Create new conversation.
+   * =========================================
+   * CREATE NEW CONVERSATION
+   * =========================================
    */
+
   const handleNewConversation = async () => {
     handleStopSpeaking()
 
@@ -508,8 +571,11 @@ function App() {
   }
 
   /*
-   * Select conversation.
+   * =========================================
+   * SELECT CONVERSATION
+   * =========================================
    */
+
   const handleSelectConversation = async (
     conversation
   ) => {
@@ -533,8 +599,11 @@ function App() {
   }
 
   /*
-   * Send chat message.
+   * =========================================
+   * SEND CHAT MESSAGE
+   * =========================================
    */
+
   const handleSend = async (
     messageToSend = message
   ) => {
@@ -573,15 +642,17 @@ function App() {
         chatData?.aiResponse ||
         'No response received.'
 
+      const timestamp = Date.now()
+
       setMessages((previous) => [
         ...previous,
         {
-          id: `${conversationId}-user-${Date.now()}`,
+          id: `${conversationId}-user-${timestamp}`,
           role: 'USER',
           content: trimmedMessage,
         },
         {
-          id: `${conversationId}-assistant-${Date.now() + 1}`,
+          id: `${conversationId}-assistant-${timestamp + 1}`,
           role: 'ASSISTANT',
           content: aiResponse,
         },
@@ -608,8 +679,11 @@ function App() {
   }
 
   /*
-   * Voice input.
+   * =========================================
+   * NORMAL VOICE INPUT
+   * =========================================
    */
+
   const handleVoice = () => {
     if (isSpeaking) {
       setVoiceError(
@@ -665,10 +739,13 @@ function App() {
       const errors = {
         'not-allowed':
           'Microphone permission was denied. Allow microphone access and try again.',
+
         'no-speech':
           'No speech was detected. Please try again.',
+
         'audio-capture':
           'No microphone was found or is unavailable.',
+
         aborted:
           'Voice input was stopped.',
       }
@@ -704,8 +781,257 @@ function App() {
   }
 
   /*
-   * Shared command composer.
+   * =========================================
+   * AUTOMATION COMMAND RECOGNITION
+   *
+   * This is separate from normal chat voice.
+   *
+   * Example:
+   * "Open YouTube"
+   *     ↓
+   * Direct browser action
+   * =========================================
    */
+
+  const handleAutomationCommand = (
+    command
+  ) => {
+    const normalizedCommand =
+      command.toLowerCase().trim()
+
+    console.log(
+      'Automation voice command:',
+      normalizedCommand
+    )
+
+    setVoiceError('')
+
+    /*
+     * OPEN YOUTUBE
+     */
+
+    if (
+      normalizedCommand.includes(
+        'open youtube'
+      ) ||
+      normalizedCommand === 'youtube'
+    ) {
+      window.open(
+        'https://www.youtube.com',
+        '_blank',
+        'noopener,noreferrer'
+      )
+
+      return
+    }
+
+    /*
+     * OPEN GOOGLE
+     */
+
+    if (
+      normalizedCommand.includes(
+        'open google'
+      ) ||
+      normalizedCommand === 'google'
+    ) {
+      window.open(
+        'https://www.google.com',
+        '_blank',
+        'noopener,noreferrer'
+      )
+
+      return
+    }
+
+    /*
+     * OPEN GMAIL
+     */
+
+    if (
+      normalizedCommand.includes(
+        'open gmail'
+      ) ||
+      normalizedCommand.includes(
+        'open mail'
+      )
+    ) {
+      window.open(
+        'https://mail.google.com',
+        '_blank',
+        'noopener,noreferrer'
+      )
+
+      return
+    }
+
+    /*
+     * OPEN CHATGPT
+     */
+
+    if (
+      normalizedCommand.includes(
+        'open chatgpt'
+      ) ||
+      normalizedCommand.includes(
+        'open chat gpt'
+      )
+    ) {
+      window.open(
+        'https://chatgpt.com',
+        '_blank',
+        'noopener,noreferrer'
+      )
+
+      return
+    }
+
+    /*
+     * CLOSE AUTOMATION
+     */
+
+    if (
+      normalizedCommand.includes(
+        'close automation'
+      ) ||
+      normalizedCommand.includes(
+        'exit automation'
+      ) ||
+      normalizedCommand.includes(
+        'go back'
+      )
+    ) {
+      setActiveView('command')
+      return
+    }
+
+    /*
+     * UNKNOWN COMMAND
+     */
+
+    setVoiceError(
+      `Command not recognized: "${command}"`
+    )
+  }
+
+  /*
+   * =========================================
+   * AUTOMATION VOICE INPUT
+   *
+   * This voice is used ONLY inside
+   * Automation screen.
+   * =========================================
+   */
+
+  const handleAutomationVoice = () => {
+    if (isSpeaking) {
+      handleStopSpeaking()
+      return
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop()
+      return
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition
+
+    if (!SpeechRecognition) {
+      setVoiceError(
+        'Voice input is not supported by this browser. Please use Chrome or Edge.'
+      )
+
+      return
+    }
+
+    setVoiceError('')
+
+    const recognition =
+      new SpeechRecognition()
+
+    recognition.lang = 'en-US'
+    recognition.continuous = false
+    recognition.interimResults = false
+
+    recognition.onstart = () => {
+      setIsListening(true)
+      setVoiceError('')
+    }
+
+    recognition.onresult = (event) => {
+      const transcript =
+        event.results[0][0].transcript.trim()
+
+      console.log(
+        'Automation command received:',
+        transcript
+      )
+
+      if (!transcript) return
+
+      handleAutomationCommand(transcript)
+    }
+
+    recognition.onerror = (event) => {
+      console.error(
+        'Automation voice error:',
+        event.error
+      )
+
+      const errors = {
+        'not-allowed':
+          'Microphone permission was denied. Allow microphone access and try again.',
+
+        'no-speech':
+          'No speech detected. Please try again.',
+
+        'audio-capture':
+          'No microphone was found or is unavailable.',
+
+        aborted:
+          'Voice command was stopped.',
+      }
+
+      setVoiceError(
+        errors[event.error] ||
+          'Voice command could not be completed. Please try again.'
+      )
+
+      setIsListening(false)
+    }
+
+    recognition.onend = () => {
+      setIsListening(false)
+      recognitionRef.current = null
+    }
+
+    recognitionRef.current = recognition
+
+    try {
+      recognition.start()
+    } catch (error) {
+      console.error(
+        'Automation voice could not start:',
+        error
+      )
+
+      setIsListening(false)
+      recognitionRef.current = null
+
+      setVoiceError(
+        'Voice command could not be started. Please try again.'
+      )
+    }
+  }
+
+  /*
+   * =========================================
+   * SHARED COMMAND COMPOSER
+   * =========================================
+   */
+
   const renderComposer = () => (
     <div className="command-composer-wrap">
       {voiceError && (
@@ -788,11 +1114,107 @@ function App() {
   )
 
   /*
-   * Login screen.
+   * =========================================
+   * LOGIN SCREEN
+   * =========================================
    */
+
   if (!authenticated) {
     return <Login onLogin={handleLogin} />
   }
+
+  /*
+   * =========================================
+   * AUTOMATION FULLSCREEN
+   *
+   * Automation gets its own fullscreen shell.
+   *
+   * Voice button is added here.
+   *
+   * Example:
+   *
+   * User clicks mic
+   *       ↓
+   * "Open YouTube"
+   *       ↓
+   * Speech Recognition
+   *       ↓
+   * handleAutomationCommand()
+   *       ↓
+   * YouTube opens
+   * =========================================
+   */
+
+  if (activeView === 'automation') {
+    return (
+      <div className="automation-fullscreen-wrapper">
+
+        <Automation
+          onClose={() =>
+            setActiveView('command')
+          }
+          assistantName={assistantName}
+        />
+
+        {/* =====================================
+            AUTOMATION VOICE CONTROL
+        ====================================== */}
+
+        <div className="automation-voice-control">
+
+          {voiceError && (
+            <div className="automation-voice-error">
+              {voiceError}
+            </div>
+          )}
+
+          <button
+            className={`automation-mic-button ${
+              isListening ? 'active' : ''
+            }`}
+            onClick={handleAutomationVoice}
+            disabled={isSpeaking}
+            title={
+              isListening
+                ? 'Stop listening'
+                : 'Give automation command'
+            }
+          >
+            <Mic size={25} />
+          </button>
+
+          <div className="automation-voice-info">
+            <strong>
+              {isListening
+                ? 'LISTENING...'
+                : 'VOICE AUTOMATION'}
+            </strong>
+
+            <span>
+              {isListening
+                ? 'Say a command'
+                : 'Say "Open YouTube"'}
+            </span>
+          </div>
+
+          {isListening && (
+            <div className="automation-voice-status">
+              <span />
+              <span />
+              <span />
+            </div>
+          )}
+
+        </div>
+      </div>
+    )
+  }
+
+  /*
+   * =========================================
+   * NORMAL NEXUS APPLICATION
+   * =========================================
+   */
 
   return (
     <div className="nexus-shell">
@@ -800,7 +1222,10 @@ function App() {
       <div className="ambient-glow glow-one" />
       <div className="ambient-glow glow-two" />
 
-      {/* SIDEBAR */}
+      {/* =========================================
+          SIDEBAR
+      ========================================= */}
+
       <aside
         className={`nexus-sidebar ${
           isMobileMenuOpen ? 'open' : ''
@@ -839,7 +1264,9 @@ function App() {
         </div>
 
         <nav className="sidebar-navigation">
+
           {/* COMMAND CENTER */}
+
           <button
             className={
               activeView === 'command'
@@ -856,6 +1283,7 @@ function App() {
           </button>
 
           {/* CONVERSATIONS */}
+
           <button
             className={
               activeView === 'conversations'
@@ -872,6 +1300,7 @@ function App() {
           </button>
 
           {/* FILES */}
+
           <button
             className={
               activeView === 'files'
@@ -888,16 +1317,28 @@ function App() {
           </button>
 
           {/* AUTOMATION */}
+
           <button
-            className="future-button"
-            title="Coming soon"
+            className={
+              activeView === 'automation'
+                ? 'active'
+                : ''
+            }
+            onClick={() => {
+              setActiveView('automation')
+              setIsMobileMenuOpen(false)
+              setVoiceError('')
+            }}
           >
             <Zap size={18} />
             Automation
           </button>
         </nav>
 
-        {/* RECENT CONVERSATIONS */}
+        {/* =========================================
+            RECENT CONVERSATIONS
+        ========================================= */}
+
         <div className="sidebar-conversations">
           <div className="sidebar-label">
             RECENT CONVERSATIONS
@@ -941,7 +1382,10 @@ function App() {
           )}
         </div>
 
-        {/* CORE STATUS */}
+        {/* =========================================
+            CORE STATUS
+        ========================================= */}
+
         <div className="sidebar-core-status">
           <div className="online-status">
             <span />
@@ -968,7 +1412,10 @@ function App() {
           </div>
         </div>
 
-        {/* FOOTER CONTROLS */}
+        {/* =========================================
+            FOOTER CONTROLS
+        ========================================= */}
+
         <div className="sidebar-footer-controls">
           <button title="Settings">
             <Settings size={18} />
@@ -983,7 +1430,10 @@ function App() {
         </div>
       </aside>
 
-      {/* MOBILE OVERLAY */}
+      {/* =========================================
+          MOBILE OVERLAY
+      ========================================= */}
+
       {isMobileMenuOpen && (
         <button
           className="sidebar-overlay"
@@ -995,7 +1445,11 @@ function App() {
       )}
 
       <main className="nexus-main">
-        {/* HEADER */}
+
+        {/* =========================================
+            HEADER
+        ========================================= */}
+
         <header className="nexus-header">
           <button
             className="mobile-menu-button"
@@ -1011,8 +1465,7 @@ function App() {
 
             {activeView === 'command'
               ? 'COMMAND CENTER'
-              : activeView ===
-                  'conversations'
+              : activeView === 'conversations'
                 ? 'CONVERSATIONS'
                 : 'FILES'}
           </div>
@@ -1033,11 +1486,13 @@ function App() {
           </div>
         </header>
 
-        {/* =====================================================
+        {/* =========================================
             COMMAND CENTER
-        ===================================================== */}
+        ========================================= */}
+
         {activeView === 'command' ? (
           <section className="command-view">
+
             <div className="command-topline">
               <div>
                 <span className="eyebrow">
@@ -1062,6 +1517,7 @@ function App() {
             </div>
 
             <div className="command-dashboard">
+
               <div className="left-metric-stack">
                 {systemStats.map(
                   ({
@@ -1079,6 +1535,7 @@ function App() {
 
                       <div>
                         <small>{label}</small>
+
                         <strong>
                           {value}
                         </strong>
@@ -1133,6 +1590,7 @@ function App() {
               </div>
 
               <div className="right-metric-stack">
+
                 <article className="activity-card">
                   <div className="card-heading">
                     <Cpu size={17} />
@@ -1176,10 +1634,14 @@ function App() {
                     All systems secure
                   </span>
                 </article>
+
               </div>
             </div>
 
-            {/* VOICE PANEL */}
+            {/* =========================================
+                VOICE PANEL
+            ========================================= */}
+
             <div
               className={`voice-link-panel ${
                 isListening ||
@@ -1256,7 +1718,10 @@ function App() {
               </button>
             )}
 
-            {/* MESSAGE PREVIEW */}
+            {/* =========================================
+                MESSAGE PREVIEW
+            ========================================= */}
+
             {messages.length > 0 && (
               <div className="command-message-preview">
                 {messages
@@ -1283,7 +1748,10 @@ function App() {
 
             {renderComposer()}
 
-            {/* QUICK COMMANDS */}
+            {/* =========================================
+                QUICK COMMANDS
+            ========================================= */}
+
             <div className="command-suggestions">
               <span>
                 QUICK COMMANDS
@@ -1326,11 +1794,12 @@ function App() {
 
         ) : activeView === 'conversations' ? (
 
-          /* =====================================================
+          /* =========================================
              CONVERSATIONS
-          ===================================================== */
+          ========================================= */
 
           <section className="conversations-view">
+
             <div className="conversation-list-panel">
               <div className="conversation-panel-header">
                 <div>
@@ -1415,6 +1884,7 @@ function App() {
             </div>
 
             <div className="conversation-thread-panel">
+
               <div className="conversation-panel-header thread-header">
                 <div>
                   <span className="eyebrow">
@@ -1435,6 +1905,7 @@ function App() {
               </div>
 
               <div className="conversation-thread">
+
                 {!selectedConversationId ? (
                   <div className="empty-thread">
                     <Bot size={38} />
@@ -1450,8 +1921,10 @@ function App() {
                       create a new one.
                     </p>
                   </div>
+
                 ) : messages.length ===
                   0 ? (
+
                   <div className="empty-thread">
                     <Sparkles
                       size={38}
@@ -1468,7 +1941,9 @@ function App() {
                       {assistantName}.
                     </p>
                   </div>
+
                 ) : (
+
                   messages.map(
                     (entry) => (
                       <article
@@ -1489,34 +1964,44 @@ function App() {
                     )
                   )
                 )}
+
               </div>
 
               <div className="conversation-composer">
                 {renderComposer()}
               </div>
+
             </div>
           </section>
 
         ) : (
 
-          /* =====================================================
+          /* =========================================
              FILES
-          ===================================================== */
+          ========================================= */
 
           <section className="files-view">
             <Files
-            assistantName={assistantName}
-    conversationId={selectedConversationId} />
+              assistantName={assistantName}
+              conversationId={selectedConversationId}
+            />
           </section>
         )}
 
+        {/* =========================================
+            NORMAL NEXUS FOOTER
+        ========================================= */}
+
         <footer className="nexus-footer">
           <span>NEXUS AI</span>
+
           <span>
             CORE ENGINE CONNECTED
           </span>
+
           <span>v1.0.0</span>
         </footer>
+
       </main>
     </div>
   )
