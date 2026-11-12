@@ -1065,7 +1065,6 @@ button {
     radial-gradient(circle at center, rgba(0, 170, 255, 0.12), transparent 38%),
     #020712;
 }
-
 .login-grid,
 .login-glow,
 .hud-line,
@@ -1141,15 +1140,17 @@ button {
 .login-core {
   width: 140px;
   height: 140px;
-  display: grid;
-  place-items: center;
   position: relative;
   margin: 18px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
-
 .login-core-center {
   width: 58px;
   height: 58px;
+  position: relative;
   z-index: 2;
   display: grid;
   place-items: center;
@@ -1748,3 +1749,45 @@ button {
   background: rgba(255, 70, 70, 0.1);
   border: 1px solid rgba(255, 70, 70, 0.25);
 }
+.core-orbit,
+.core-energy,
+.login-ring,
+.core-scan {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.core-orbit { border: 1px solid rgba(47, 202, 255, 0.35); }
+.orbit-one { width: 140px; height: 140px; border-style: dashed; animation: loginOrbitSpin 18s linear infinite; }
+.orbit-two { width: 110px; height: 110px; animation: loginOrbitSpinReverse 12s linear infinite; }
+.orbit-three { width: 84px; height: 84px; }
+
+.login-ring { border: 1px solid rgba(80, 215, 255, 0.25); }
+.ring-a { width: 124px; height: 124px; }
+.ring-b { width: 96px; height: 96px; }
+
+.core-energy {
+  width: 70px;
+  height: 70px;
+  background: radial-gradient(circle, rgba(0, 190, 255, 0.25), transparent 70%);
+  animation: loginEnergyPulse 2.4s ease-in-out infinite;
+}
+.energy-two { width: 100px; height: 100px; animation-delay: 1.2s; }
+
+.core-scan {
+  width: 140px;
+  height: 140px;
+  background: conic-gradient(from 0deg, rgba(82, 228, 255, 0.35), transparent 25%);
+  animation: loginScan 5s linear infinite;
+}
+
+@keyframes loginOrbitSpin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes loginOrbitSpinReverse { to { transform: translate(-50%, -50%) rotate(-360deg); } }
+@keyframes loginEnergyPulse {
+  0%, 100% { opacity: 0.4; transform: translate(-50%, -50%) scale(0.9); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+}
+@keyframes loginScan { to { transform: translate(-50%, -50%) rotate(360deg); } }

@@ -1088,9 +1088,10 @@ function App() {
           <button
             className="send-control"
             onClick={handleStopSpeaking}
-            title="Stop JARVIS"
+            title={`Stop ${assistantName || 'NEXUS'}`}
           >
             <Square size={18} />
+            <span>STOP {assistantName || 'JARVIS'}</span>
           </button>
         ) : (
           <button
@@ -1582,7 +1583,7 @@ function App() {
                   <span className="core-caption-dot" />
 
                   {isSpeaking
-                    ? 'JARVIS SPEAKING'
+                    ? `${assistantName.toUpperCase()} SPEAKING`
                     : isListening
                       ? 'VOICE LINK ACTIVE'
                       : `${assistantName.toUpperCase()} CORE STANDBY`}
@@ -1711,10 +1712,10 @@ function App() {
                 onClick={
                   handleStopSpeaking
                 }
-                title="Stop JARVIS"
+                title={`Stop ${assistantName || 'JARVIS'}`}
               >
                 <Square size={16} />
-                STOP JARVIS
+                STOP {assistantName || 'JARVIS'}
               </button>
             )}
 

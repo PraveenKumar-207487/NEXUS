@@ -1030,7 +1030,7 @@ function Automation({ onClose, assistantName }) {
               {isListening
                 ? 'LISTENING FOR COMMAND'
                 : isSpeaking
-                  ? 'JARVIS SPEAKING'
+                  ? `${assistantName || 'NEXUS'} SPEAKING`
                   : 'AUTOMATION CORE ONLINE'}
             </div>
 
@@ -1074,7 +1074,7 @@ function Automation({ onClose, assistantName }) {
 
             <div className="response-answer">
               <small>
-                {assistantName || 'JARVIS'}
+                {assistantName || 'NEXUS'}
               </small>
 
               <p>{response}</p>
@@ -1135,10 +1135,10 @@ function Automation({ onClose, assistantName }) {
                 )
               }
               placeholder={
-                isListening
-                  ? 'Listening... say "Hey JARVIS, Open YouTube"'
-                  : 'Type command... e.g. Hey JARVIS, Open YouTube'
-              }
+              isListening
+                ? `Listening... say "Hey ${assistantName || 'NEXUS'}, Open YouTube"`
+                : `Type command... e.g. Hey ${assistantName || 'NEXUS'}, Open YouTube`
+}
               disabled={isListening}
             />
 
